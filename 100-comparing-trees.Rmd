@@ -1,0 +1,64 @@
+---
+title: "100-comparing-trees"
+author: "Mac Campbell"
+date: "April 10, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##Create a timetree of host taxa
+For a subset of taxa, let's create a timetree.
+```{r, warning=FALSE, message=FALSE}
+library(tidyverse)
+library(ggtree)
+
+data<-read_tsv("~/github/AAV-GLUE/tabular/locus/epv-locus-data.tsv")
+cerco<-data %>% filter(Family=="Cercopithecidae")
+species<-cerco %>% select(Species) %>% unique()
+
+write_tsv(species, "data/Cercopithecidae-species-list.tsv")
+```
+
+Now I should just be able to upload this to timetree.org and produce a time tree.
+```{r, warning=FALSE, message=FALSE}
+tree<-read.tree("data/Cercopithecidae-species-list.nwk")
+t<-ggtree(tree)
+
+#Making tip ages = 0 
+t$data<-t$data %>% mutate(Age=max(x)-x)
+
+t + geom_tiplab() +
+  geom_treescale()+
+  xlim(0,25)+
+  geom_nodelab(aes(label=round(Age,2)), hjust=0)
+```
+
+Awesome!!!
+
+## Now, let's get some EVE trees.
+There are two goals here.    
+__1__ Identify the age of integration      
+__2__ Quantifying topological differences between the species tree and the EVE tree    
+
+As for topological differences, I don't know how the rooting will play out. Also, if the EVE is only found in one taxon I imagine we can only go to the divergence of it from the others?? Colobus-angolensis-palliatus-Dependo-85 could have bounds (0, Root Age). So for minimum ages this should be pretty straighforward.
+
+```{r, warning=FALSE, message=FALSE}
+library(phytools)
+
+#Making "Taxa" for tip labs and calculate number of taxa
+df<-cerco %>% mutate(Delim=gsub(" ","_",Species)) %>%
+  group_by(locus_name) %>% mutate(Taxa=paste(Delim, collapse=" "))  %>% mutate(Count=n())
+
+#getting min age of nodes
+df2<-df %>% mutate(node = as.numeric(ifelse(Count > 1, findMRCA(tree, tips=strsplit(Taxa, " ")[[1]]), NA)))
+df3<-left_join(df2, t$data, by="node")
+df3$Age<-replace_na(df3$Age, 0)
+
+#Summarize min age of nodes
+df3 %>% select(locus_name, Age) %>% unique()
+```
+
+How about quantifying the differences in topology? It may be that we need to prune and unroot our starting time tree.
