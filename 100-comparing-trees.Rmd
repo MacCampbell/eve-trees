@@ -61,4 +61,5 @@ df3$Age<-replace_na(df3$Age, 0)
 df3 %>% select(locus_name, Age) %>% unique()
 ```
 
-How about quantifying the differences in topology? It may be that we need to prune and unroot our starting time tree.
+How about quantifying the differences in topology? It may be that we need to prune and unroot our starting time tree.    
+Take a look at: https://cran.r-project.org/web/packages/Quartet/vignettes/Tree-distance-metrics.pdf     

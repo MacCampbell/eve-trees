@@ -1,0 +1,21 @@
+---
+title: "101-full-tree"
+author: "Mac Campbell"
+date: "April 11, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#How about all the species?
+```{r, warning=FALSE, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(phangorn)
+
+data<-read_tsv("~/github/AAV-GLUE/tabular/locus/epv-locus-data.tsv")
+species<-data %>% select(Species) %>% unique()
+write_tsv(species, "data/species-list.tsv")
+
+```
