@@ -59,7 +59,19 @@ df3$Age<-replace_na(df3$Age, 0)
 
 #Summarize min age of nodes
 df3 %>% select(locus_name, Age) %>% unique()
+annotations<-df3 %>% select(locus_name, node, Age) %>% unique()
+
 ```
 
+Can I plot this infor on the tree in a useful. 
+```{r}
+library("ggrepel")
+t + geom_tiplab() +
+  geom_treescale()+
+  xlim(0,25)+
+  geom_nodelab(aes(subset=node %in% c("8"), label=round(Age,2)), hjust=0)
+ # geom_label_repel(aes(subset=node==8, label="dependoX"))
+
+```
 How about quantifying the differences in topology? It may be that we need to prune and unroot our starting time tree.    
 Take a look at: https://cran.r-project.org/web/packages/Quartet/vignettes/Tree-distance-metrics.pdf     
