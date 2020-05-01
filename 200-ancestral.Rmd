@@ -1,0 +1,185 @@
+---
+title: "200-ancestral"
+author: "Mac Campbell"
+date: "April 30, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+```
+
+#Ancestral Sequences
+I'm going to make some ancestral sequences for EVEs with >= 4 taxa.
+```{r}
+library(tidyverse)
+library(ggtree)
+data<-read_tsv("~/github/AAV-GLUE/tabular/locus/epv-locus-data.tsv")
+top<-data %>% filter(locus_name != "NK") %>% group_by(locus_name) %>% summarize(Count=n()) %>% arrange(-Count) %>% filter(Count >= 4)
+
+top
+
+write_tsv(top, "data/tips/top.tsv")
+```
+
+Now I need some way to select those alignments.
+
+```{r}
+path<-top %>% mutate(Path=paste0("/Users/mac/github/AAV-GLUE/alignments/eve/tip/",locus_name,".aln.fna")) %>% select(Path)
+write_tsv(path, col_names = FALSE, "/Users/mac/github/eve-trees/data/tips/paths.txt")
+```
+
+In `/Users/mac/github/eve-trees/data/tips`     
+```{sh, eval=FALSE}
+cat paths.txt | while read line; do cp $line .; done;
+for f in *.fna; do seqConverter.pl -d$f -ope; done;
+for f in *.phylip; do grep -v _con_ $f > `basename $f .phylip`.phy; done;
+
+```
+Outgroups:
+Cercocebus_atys_Dependo_71_     
+Vulpes_vulpes_Dependo_358
+Panthera_tigris_altaica_Dependo_271 Puma_concolor_Dependo_321 Felis_catus_Dependo_148
+
+```{sh, eval=FALSE}
+raxmlHPC-PTHREADS-SSE3 -T 3 -m GTRGAMMA -p 123 -f a -# 100 -x 123 -o Cercocebus_atys_Dependo_71_ -n dependo.14 -s dependo.14-cercopithecidae.aln.phy
+raxmlHPC-PTHREADS-SSE3  -T 3 -m GTRGAMMA -p 123 -f A -t RAxML_bestTree.dependo.14 -s dependo.14-cercopithecidae.aln.phy -n dependo.14.ancestral
+grep ROOT RAxML_marginalAncestralStates.dependo.14.ancestral | perl -pe 's/ROOT\s/>dependo.14-cercopithecidae-ancestral\n/' >dependo.14-cercopithecidae.fasta
+
+raxmlHPC-PTHREADS-SSE3 -T 3 -m GTRGAMMA -p 123 -f a -# 100 -x 123 -o Vulpes_vulpes_Dependo_358 -n dependo.16 -s dependo.16-canid.aln.phy
+raxmlHPC-PTHREADS-SSE3  -T 3 -m GTRGAMMA -p 123 -f A -t RAxML_bestTree.dependo.16 -s dependo.16-canid.aln.phy -n dependo.16.ancestral
+grep ROOT RAxML_marginalAncestralStates.dependo.16.ancestral | perl -pe 's/ROOT\s/>dependo.16-canid-ancestral\n/' >dependo.16-canid.fasta
+
+raxmlHPC-PTHREADS-SSE3 -T 3 -m GTRGAMMA -p 123 -f a -# 100 -x 123 -o Panthera_tigris_altaica_Dependo_271,Puma_concolor_Dependo_321,Felis_catus_Dependo_148  -n dependo.17 -s dependo.17-felid-pinniped.aln.phy
+raxmlHPC-PTHREADS-SSE3  -T 3 -m GTRGAMMA -p 123 -f A -t RAxML_bestTree.dependo.17 -s dependo.17-felid-pinniped.aln.phy -n dependo.17.ancestral
+grep ROOT RAxML_marginalAncestralStates.dependo.17.ancestral | perl -pe 's/ROOT\s/>dependo.17-felid-pinniped-ancestral\n/' >dependo.17-felid-pinniped.fasta
+
+```
+
+I relabeled these as *-ancestral.fasta
+
+Neat!  Let's get a few more done.     
+Outgroups:     
+Desmodus_rotundus_Dependo_101_ ? 
+Vicugna_pacos_Dependo_356_ 
+Daubentonia_madagascariensis_Dependo_95_ Daubentonia_madagascariensis_Dependo_96_
+```{sh, eval=FALSE}
+raxmlHPC-PTHREADS-SSE3 -T 3 -m GTRGAMMA -p 123 -f a -# 100 -x 123 -o Desmodus_rotundus_Dependo_101_  -n dependo.22 -s dependo.22-laurasiatheria.aln.phy
+raxmlHPC-PTHREADS-SSE3  -T 3 -m GTRGAMMA -p 123 -f A -t RAxML_bestTree.dependo.22 -s  dependo.22-laurasiatheria.aln.phy -n dependo.22.ancestral
+grep ROOT RAxML_marginalAncestralStates.dependo.22.ancestral | perl -pe 's/ROOT\s/>dependo.22-laurasiatheria-ancestral\n/' > dependo.22-laurasiatheria-ancestral.fasta
+
+raxmlHPC-PTHREADS-SSE3 -T 3 -m GTRGAMMA -p 123 -f a -# 100 -x 123 -o Vicugna_pacos_Dependo_356_   -n dependo.23 -s dependo.23-camelid.aln.phy
+raxmlHPC-PTHREADS-SSE3  -T 3 -m GTRGAMMA -p 123 -f A -t RAxML_bestTree.dependo.23 -s  dependo.23-camelid.aln.phy -n dependo.23.ancestral
+grep ROOT RAxML_marginalAncestralStates.dependo.23.ancestral | perl -pe 's/ROOT\s/>dependo.23-camelid-ancestral\n/' > dependo.23-camelid-ancestral.fasta
+
+raxmlHPC-PTHREADS-SSE3 -T 3 -m GTRGAMMA -p 123 -f a -# 100 -x 123 -o Daubentonia_madagascariensis_Dependo_95_,Daubentonia_madagascariensis_Dependo_96_  -g dependo.26.constrain.tre -n dependo.26 -s dependo.26-lemuridae.aln.phy
+raxmlHPC-PTHREADS-SSE3  -T 3 -m GTRGAMMA -p 123 -f A -t RAxML_bestTree.dependo.26 -s  dependo.26-lemuridae.aln.phy -n dependo.26.ancestral
+grep ROOT RAxML_marginalAncestralStates.dependo.26.ancestral | perl -pe 's/ROOT\s/>dependo.26-lemuridae-ancestral\n/' > dependo.26-lemuridae-ancestral.fasta
+```
+
+```{r}
+t26<-read.tree("data/tips/RAxML_nodeLabelledRootedTree.dependo.26.ancestral")
+ggtree(t26)+geom_nodelab()+geom_tiplab() + xlim(0,8)
+```
+
+##Constraining tree for these?
+```{sh, eval=FALSE}
+raxmlHPC-PTHREADS-SSE3 -T 3 -m GTRGAMMA -p 123 -f a -# 100 -x 123 -o Mormoops_blainvillei_Dependo_220_,Mormoops_blainvillei_Dependo_221_,Mormoops_blainvillei_Dependo_222_ -g dependo.31.constrain.tre -n dependo.31 -s dependo.31-phylomormoo.aln.phy
+raxmlHPC-PTHREADS-SSE3  -T 3 -m GTRGAMMA -p 123 -f A -t RAxML_bestTree.dependo.31 -s  dependo.31-phylomormoo.aln.phy -n dependo.31.ancestral
+grep ROOT RAxML_marginalAncestralStates.dependo.31.ancestral | perl -pe 's/ROOT\s/>dependo.31-phylomormoo-ancestral\n/' > dependo.31-phylomormoo-ancestral.fasta
+```
+
+```{r}
+t31<-read.tree("data/tips/RAxML_nodeLabelledRootedTree.dependo.31.ancestral")
+ggtree(t31)+geom_nodelab()+geom_tiplab() + xlim(0,10)
+```
+
+```{sh, eval=FALSE}
+raxmlHPC-PTHREADS-SSE3 -T 3 -m GTRGAMMA -p 123 -f a -# 100 -x 123 -o Pteronotus_parnellii_Dependo_311_,Pteronotus_parnellii_Dependo_312_,Pteronotus_parnellii_Dependo_313_,Pteronotus_parnellii_Dependo_314_ -g dependo.34.constrain.tre -n dependo.34 -s dependo.34-pteropodidae.aln.phy
+raxmlHPC-PTHREADS-SSE3  -T 3 -m GTRGAMMA -p 123 -f A -t RAxML_bestTree.dependo.34 -s  dependo.34-pteropodidae.aln.phy -n dependo.34.ancestral
+grep ROOT RAxML_marginalAncestralStates.dependo.34.ancestral | perl -pe 's/ROOT\s/>dependo.34-pteropodidae-ancestral\n/' > dependo.34-pteropodidae-ancestral.fasta
+```
+
+```{r}
+t34<-read.tree("data/tips/RAxML_nodeLabelledRootedTree.dependo.34.ancestral")
+ggtree(t34)+geom_nodelab()+geom_tiplab() + xlim(0,12)
+```
+
+Moving on, I'll use some constraining trees, and not show them.    
+```{sh, eval=FALSE}
+raxmlHPC-PTHREADS-SSE3 -T 3 -m GTRGAMMA -p 123 -f a -# 100 -x 123 -o Megaderma_lyra_Dependo_205_,Megaderma_lyra_Dependo_206_,Megaderma_lyra_Dependo_207_,Megaderma_lyra_Dependo_208_,Megaderma_lyra_Dependo_209_ -g dependo.35.constrain.tre -n dependo.35 -s dependo.35-rhinolophidae.aln.phy
+raxmlHPC-PTHREADS-SSE3  -T 3 -m GTRGAMMA -p 123 -f A -t RAxML_bestTree.dependo.35 -s dependo.35-rhinolophidae.aln.phy -n dependo.35.ancestral
+grep ROOT RAxML_marginalAncestralStates.dependo.35.ancestral | perl -pe 's/ROOT\s/>dependo.35-rhinolophidae-ancestral\n/' > dependo.35-rhinolophidae-ancestral.fasta
+
+raxmlHPC-PTHREADS-SSE3 -T 3 -m GTRGAMMA -p 123 -f a -# 100 -x 123 -o Fukomys_damarensis_Dependo_150_,Fukomys_damarensis_Dependo_151_ -g dependo.44.constrain.tre -n dependo.44 -s dependo.44-bathyergidae.aln.phy
+raxmlHPC-PTHREADS-SSE3  -T 3 -m GTRGAMMA -p 123 -f A -t RAxML_bestTree.dependo.44 -s dependo.44-bathyergidae.aln.phy -n dependo.44.ancestral
+grep ROOT RAxML_marginalAncestralStates.dependo.44.ancestral | perl -pe 's/ROOT\s/>dependo.44-bathergidae-ancestral\n/' > dependo.44-bathyergidae-ancestral.fasta
+
+raxmlHPC-PTHREADS-SSE3 -T 3 -m GTRGAMMA -p 123 -f a -# 100 -x 123 -o Apodemus_speciosus_Dependo_30_,Apodemus_sylvaticus_Dependo_31_ -g dependo.46.constrain.tre -n dependo.46 -s dependo.46-glires.aln.phy
+raxmlHPC-PTHREADS-SSE3  -T 3 -m GTRGAMMA -p 123 -f A -t RAxML_bestTree.dependo.46 -s dependo.46-glires.aln.phy -n dependo.46.ancestral
+grep ROOT RAxML_marginalAncestralStates.dependo.46.ancestral | perl -pe 's/ROOT\s/>dependo.46-glires.ancestral\n/' > dependo.46-glires-ancestral.fasta
+
+```
+
+```{r}
+t44<-read.tree("data/tips/RAxML_nodeLabelledRootedTree.dependo.44.ancestral")
+ggtree(t44)+geom_tiplab()+xlim(0,7)
+```
+
+
+```{sh, eval=FALSE}
+raxmlHPC-PTHREADS-SSE3 -T 3 -m GTRGAMMA -p 123 -f a -# 100 -x 123 -o Peromyscus_maniculatus_bairdii_Dependo_283,Neotoma_lepida_Dependo_253 -g dependo.50.constrain.tre -n dependo.50 -s dependo.50-muroidae.aln.phy
+raxmlHPC-PTHREADS-SSE3  -T 3 -m GTRGAMMA -p 123 -f A -t RAxML_bestTree.dependo.50 -s dependo.50-muroidae.aln.phy -n dependo.50.ancestral
+grep ROOT RAxML_marginalAncestralStates.dependo.50.ancestral | perl -pe 's/ROOT\s/>dependo.50-muroidae.ancestral\n/' > dependo.50-muroidae-ancestral.fasta
+```
+
+```{r}
+c50<-read.tree("data/tips/dependo.50.constrain.tre")
+ggtree(c50)+geom_tiplab()+xlim(0,6)
+t50<-read.tree("data/tips/RAxML_nodeLabelledRootedTree.dependo.50.ancestral")
+ggtree(t50)+geom_nodelab()+geom_tiplab()+xlim(0,8)
+```
+
+```{sh, eval=FALSE}
+raxmlHPC-PTHREADS-SSE3 -T 3 -m GTRGAMMA -p 123 -f a -# 100 -x 123 -o Dolichotis_patagonum_PVJX010010833 -n dependo.54 -s dependo.54-cavid.aln.phy
+raxmlHPC-PTHREADS-SSE3  -T 3 -m GTRGAMMA -p 123 -f A -t RAxML_bestTree.dependo.54 -s dependo.54-cavid.aln.phy -n dependo.54.ancestral
+grep ROOT RAxML_marginalAncestralStates.dependo.54.ancestral | perl -pe 's/ROOT\s/>dependo.54-cavid.ancestral\n/' > dependo.54-cavid-ancestral.fasta
+
+```
+
+## Missing loci
+Some differences in spelling, e.g. dependo.2-vespertilionidae.fna  vs dependo.2-vespertilionidae.aln.fna or dependo.4-rhinocerotidae.aln.fna vs dependo.4-ceratotherium.aln.fna. dependo.1-whippomorpha missing 10 EVES.
+
+```{sh, eval=FALSE}
+raxmlHPC-PTHREADS-SSE3 -T 3 -m GTRGAMMA -p 123 -f a -# 100 -x 123 -o Lasiurus_borealis_Dependo_179_ -n dependo.2 -s dependo.2-vespertilionidae.aln.phy
+raxmlHPC-PTHREADS-SSE3  -T 3 -m GTRGAMMA -p 123 -f A -t RAxML_bestTree.dependo.2 -s dependo.2-vespertilionidae.aln.phy -n dependo.2.ancestral
+grep ROOT RAxML_marginalAncestralStates.dependo.2.ancestral | perl -pe 's/ROOT\s/>dependo.2-vespertilionidae.ancestral\n/' > dependo.2-vespertilionidae-ancestral.fasta
+
+#Mus_castaneus is a subspecies of mus musculus it seems
+raxmlHPC-PTHREADS-SSE3 -T 3 -m GTRGAMMA -p 123 -f a -# 100 -x 123 -o Mus_pahari_Dependo_237_ -g dependo.51.constrain.tre -n dependo.51 -s dependo.51-mus.aln.phy
+raxmlHPC-PTHREADS-SSE3  -T 3 -m GTRGAMMA -p 123 -f A -t RAxML_bestTree.dependo.51 -s dependo.51-mus.aln.phy -n dependo.51.ancestral
+grep ROOT RAxML_marginalAncestralStates.dependo.51.ancestral | perl -pe 's/ROOT\s/>dependo.51-mus.ancestral\n/' > dependo.51-mus-ancestral.fasta
+```
+
+
+```{r}
+t2<-read.tree("data/tips/RAxML_nodeLabelledRootedTree.dependo.2.ancestral")
+ggtree(t2)+geom_nodelab()+geom_tiplab()+xlim(0,10)
+
+t51<-read.tree("data/tips/dependo.51.constrain.tre")
+ggtree(t51)+geom_nodelab()+geom_tiplab()+xlim(0,10)
+
+```
+
+Last one for today, dependo.20-equidae (as dependo.20-laurasiatheria in list)
+```{sh, eval=FALSE}
+raxmlHPC-PTHREADS-SSE3 -T 3 -m GTRGAMMA -p 123 -f a -# 100 -x 123 -o Equus_caballus_Dependo_128_,Equus_caballus_fjord_Dependo_130_,Equus_caballus_icelandic_Dependo_131_,Equus_ferus_przewalskii_Dependo_132_ -n dependo.20 -s dependo.20-equidae.aln.phy
+raxmlHPC-PTHREADS-SSE3  -T 3 -m GTRGAMMA -p 123 -f A -t RAxML_bestTree.dependo.20 -s dependo.20-equidae.aln.phy -n dependo.20.ancestral
+grep ROOT RAxML_marginalAncestralStates.dependo.20.ancestral | perl -pe 's/ROOT\s/>dependo.20-equidae.ancestral\n/' > dependo.20-equidae-ancestral.fasta
+```
+
+Well, I tried rerooting this, but a bit of shennanigans. Giving up for now.
+```{r}
+t20<-read.tree("data/tips/RAxML_nodeLabelledRootedTree.dependo.20.ancestral")
+ggtree(t20)+geom_nodelab()+geom_tiplab()+xlim(0,10)
+```

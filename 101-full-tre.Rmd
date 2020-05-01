@@ -13,6 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r, warning=FALSE, message=FALSE, warning=FALSE}
 library(tidyverse)
 library(ggtree)
+library(ggrepel)
 library(phangorn)
 library(ape)
 library(mixtools)
@@ -65,7 +66,9 @@ t + geom_tiplab(size=2) +
   xlim(0,350)+
   geom_nodelab(aes(label=round(Age,2)), hjust=0, size=2)
 
+
 ggsave("outputs/101/species-list-timetree.pdf", height=20, width=8.5)
+
 ```
 
 That looks ok! 
@@ -201,6 +204,50 @@ ggarrange(k2, k3, k4, k5, k6, ncol = 3, nrow = 2)
 
 ggsave("outputs/101/eve-age-mixtures.pdf", width=22, height=8)
 ```
+
+## The full tree needs help
+__1__ Common names.
+__2__ The x-axis.
+
+I'm using the common name files from Shannon. During some curation.
+`cat commonnames.tsv | perl -pe "s/_\d+//g" > commonnames-curated.tsv`    
+editing subspecific names out    
+
+```{r}
+taxonomy<-read_tsv("data/commonnames-curated.tsv") %>% rename(label=MERGE_NAME)
+s<-t
+s$data <-left_join(s$data,taxonomy)
+s$data <-s$data %>% mutate(CommonName=ifelse(COMMON_NAME=="NA", label, COMMON_NAME ))
+st<-s + geom_tiplab(aes(label=CommonName),size=2) +
+  geom_nodelab(aes(subset=node %in% nodes$node, label=round(Age,2)), hjust=0, size=2)+
+  geom_tiplab(aes(subset=label %in% tipSpecies$Delim, label=CommonName), size=2, color="red")+
+  geom_label_repel(data = nodes, aes(x=x, y=y, label=locus_name), size=2, alpha=0.75)+
+  theme_tree2()+
+  scale_x_continuous(name="Time in Million of Years Ago", breaks=c(12,112,212,312), labels=c(300,200,100,0), limits=c(0,350))
+
+st
+ggsave("outputs/101/AAV-timetree.pdf", height=20, width=8.5)
+
+```
+
+```{r}
+su<-s+coord_geo(xlim = c(-50,300), ylim=c(0,1),
+                dat=list("epochs","periods"),
+                pos = as.list(rep("bottom", 2)),
+                abbrv = FALSE,
+                height = list(unit(4, "lines"), unit(2, "lines")),
+                rot = list(90,0),
+                size = list(2.5, 5)
+                )+scale_x_reverse()
+
+gg<-ggarrange2(st,su, ncol=1, heights = c(19,1))
+
+pdf("outputs/101/AAV-timetree-geologic-timescale.pdf", height=20, width=8.5)
+gg
+dev.off()
+
+```
+
 
  
  
