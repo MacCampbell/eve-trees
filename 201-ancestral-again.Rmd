@@ -1,0 +1,167 @@
+---
+title: "201-ancestral-again"
+author: "Mac Campbell"
+date: "5/28/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+```
+
+## Ancestral sequence reconstruction
+
+Let's put these all into outputs/201. First, compute some EVEs that meet our criterion of >= 4 seqs.
+
+```{r}
+library(tidyverse)
+library(ggtree)
+data<-read_tsv("data/epv-side-data.tsv") %>% filter(locus_name !="NK") %>% group_by(locus_name) %>%
+  summarize(Count=n()) %>% arrange(-Count) %>% filter(Count >= 4)
+data
+data %>% arrange(locus_name)
+```
+
+Obtain alignments.
+
+```{r}
+path<-data %>% mutate(Path=paste0("/Users/mac/github/AAV-GLUE/alignments/eve/tip/",locus_name,".aln.fna")) %>% select(Path)
+write_tsv(path, col_names = FALSE, "/Users/mac/github/eve-trees/outputs/201/paths.txt")
+```
+
+Only obtained 12 alignments.
+There are some differences in naming for loci and *.fna files.   
+felid-pinniped vs carnivore
+camelid vs camelidae
+
+There are also two entries in the .tsv consulted:
+dependo.20-laurasiatheria	9			
+dependo.22-laurasiatheria	42			
+
+```{sh, eval=FALSE}
+cp /Users/mac/github/AAV-GLUE/alignments/eve/tip/*.fna .
+```
+
+In `/Users/mac/github/eve-trees/outputs/201`     
+```{sh, eval=FALSE}
+#cat paths.txt | while read line; do cp $line .; done;
+for f in *.fna; do seqConverter.pl -d$f -ope; done;
+for f in *.phylip; do grep -v _con_ $f > `basename $f .phylip`.phy; done;
+```
+
+Keep an eye out for a consensus sequence so that the phylips may have too many taxa specified. Yeah.     
+
+### dependo.1
+For dependo.1 we can root by the hippo, Hippopotamus_amphibius_Dependo_166_ here.
+```{sh, eval=FALSE}
+raxmlHPC-PTHREADS-SSE3 -T 3 -m GTRGAMMA -p 123 -f a -# 100 -x 123 -o Hippopotamus_amphibius_Dependo_166_ -n dependo.1 -s dependo.1-whippomorpha.aln.phy
+
+raxmlHPC-PTHREADS-SSE3  -T 3 -m GTRGAMMA -p 123 -f A -t RAxML_bestTree.dependo.1 -s dependo.1-whippomorpha.aln.phy -n dependo.1.ancestral
+
+grep ROOT RAxML_marginalAncestralStates.dependo.1.ancestral | perl -pe 's/ROOT\s/>dependo.1-whippomorpha-ancestral\n/' >dependo.1-whippomorpha.fasta
+
+```
+
+What does it look like?
+
+```{r}
+t1<-read.tree("outputs/201/RAxML_nodeLabelledRootedTree.dependo.1.ancestral")
+ggtree(t1)+geom_nodelab()+geom_tiplab() + xlim(0,20)
+```
+
+### dependo.2
+Eptesicus_fuscus_Dependo_120_,Lasiurus_borealis_Dependo_179_,Pipistrellus_pipistrellus_Dependo_295_    
+Appear to not be monophyletic in some of the bootstrap trees. What about the "best" tree?    
+```{sh, eval=FALSE}
+raxmlHPC-PTHREADS-SSE3 -T 3 -m GTRGAMMA -p 123 -f a -# 100 -x 123 -o Eptesicus_fuscus_Dependo_120_,Lasiurus_borealis_Dependo_179_,Pipistrellus_pipistrellus_Dependo_295_ -n dependo.2 -s dependo.2-vespertilionidae.aln.phy
+
+raxmlHPC-PTHREADS-SSE3  -T 3 -m GTRGAMMA -p 123 -f A -t RAxML_bestTree.dependo.2 -s dependo.2-vespertilionidae.aln.phy -n dependo.2.ancestral
+
+grep ROOT RAxML_marginalAncestralStates.dependo.2.ancestral | perl -pe 's/ROOT\s/>dependo.2-vespertilionidae-ancestral\n/' >dependo.2-vespertilionidae.fasta
+
+```
+
+```{r}
+t2<-read.tree("outputs/201/RAxML_nodeLabelledRootedTree.dependo.2.ancestral")
+ggtree(t2)+geom_nodelab()+geom_tiplab() + xlim(0,12)
+```
+
+### dependo.14, 16,17
+```{sh, eval=FALSE}
+raxmlHPC-PTHREADS-SSE3 -T 3 -m GTRGAMMA -p 123 -f a -# 100 -x 123 -o Cercocebus_atys_Dependo_71_ -n dependo.14 -s dependo.14-cercopithecidae.aln.phy
+
+raxmlHPC-PTHREADS-SSE3  -T 3 -m GTRGAMMA -p 123 -f A -t RAxML_bestTree.dependo.14 -s dependo.14-cercopithecidae.aln.phy -n dependo.14.ancestral
+
+grep ROOT RAxML_marginalAncestralStates.dependo.14.ancestral | perl -pe 's/ROOT\s/>dependo.14-cercopithecidae-ancestral\n/' >dependo.14-cercopithecidae.fasta
+
+raxmlHPC-PTHREADS-SSE3 -T 3 -m GTRGAMMA -p 123 -f a -# 100 -x 123 -o Vulpes_vulpes_Dependo_358_ -n dependo.16 -s dependo.16-canid.aln.phy
+
+raxmlHPC-PTHREADS-SSE3  -T 3 -m GTRGAMMA -p 123 -f A -t RAxML_bestTree.dependo.16 -s dependo.16-canid.aln.phy -n dependo.16.ancestral
+
+grep ROOT RAxML_marginalAncestralStates.dependo.16.ancestral | perl -pe 's/ROOT\s/>dependo.16-canid-ancestral\n/' >dependo.16-canid.fasta
+
+raxmlHPC-PTHREADS-SSE3 -T 3 -m GTRGAMMA -p 123 -f a -# 100 -x 123 -o Panthera_tigris_altaica_Dependo_271_,Puma_concolor_Dependo_321_,Felis_catus_Dependo_148_  -n dependo.17 -s dependo.17-carnivore.aln.phy
+
+raxmlHPC-PTHREADS-SSE3  -T 3 -m GTRGAMMA -p 123 -f A -t RAxML_bestTree.dependo.17 -s dependo.17-carnivore.aln.phy -n dependo.17.ancestral
+
+grep ROOT RAxML_marginalAncestralStates.dependo.17.ancestral | perl -pe 's/ROOT\s/>dependo.17-carnivore-ancestral\n/' >dependo.17-carnivore.fasta
+```
+
+```{r}
+t14<-read.tree("outputs/201/RAxML_nodeLabelledRootedTree.dependo.14.ancestral")
+ggtree(t14)+geom_nodelab()+geom_tiplab() + xlim(0,6)
+```
+
+```{r}
+t16<-read.tree("outputs/201/RAxML_nodeLabelledRootedTree.dependo.16.ancestral")
+ggtree(t16)+geom_nodelab()+geom_tiplab() + xlim(0,6)
+```
+
+```{r}
+t17<-read.tree("outputs/201/RAxML_nodeLabelledRootedTree.dependo.17.ancestral")
+ggtree(t17)+geom_nodelab()+geom_tiplab() + xlim(0,6)
+```
+### dependo.22
+
+```{sh, eval=FALSE}
+raxmlHPC-PTHREADS-SSE3 -T 3 -m GTRGAMMA -p 123 -f a -# 100 -x 123 -o Desmodus_rotundus_Dependo_101_  -n dependo.22 -s dependo.22-laurasiatheria.aln.phy
+
+raxmlHPC-PTHREADS-SSE3  -T 3 -m GTRGAMMA -p 123 -f A -t RAxML_bestTree.dependo.22 -s  dependo.22-laurasiatheria.aln.phy -n dependo.22.ancestral
+
+grep ROOT RAxML_marginalAncestralStates.dependo.22.ancestral | perl -pe 's/ROOT\s/>dependo.22-laurasiatheria-ancestral\n/' > dependo.22-laurasiatheria-ancestral.fasta
+```
+
+```{r}
+t22<-read.tree("outputs/201/RAxML_nodeLabelledRootedTree.dependo.22.ancestral")
+ggtree(t22)+geom_nodelab()+geom_tiplab() + xlim(0,30)
+```
+
+### dependo.23
+
+```{sh, eval=FALSE}
+raxmlHPC-PTHREADS-SSE3 -T 3 -m GTRGAMMA -p 123 -f a -# 100 -x 123 -o Vicugna_pacos_Dependo_356_   -n dependo.23 -s dependo.23-camelidae.aln.phy
+
+raxmlHPC-PTHREADS-SSE3  -T 3 -m GTRGAMMA -p 123 -f A -t RAxML_bestTree.dependo.23 -s  dependo.23-camelidae.aln.phy -n dependo.23.ancestral
+
+grep ROOT RAxML_marginalAncestralStates.dependo.23.ancestral | perl -pe 's/ROOT\s/>dependo.23-camelid-ancestral\n/' > dependo.23-camelidae-ancestral.fasta
+```
+
+```{r}
+t23<-read.tree("outputs/201/RAxML_nodeLabelledRootedTree.dependo.23.ancestral")
+ggtree(t23)+geom_nodelab()+geom_tiplab() + xlim(0,6)
+```
+
+### dependo.26
+With more than one sequence in this one, I'm not sure how to root it. Let's take a look.
+
+```{sh, eval=FALSE}
+raxmlHPC-PTHREADS-SSE3 -T 3 -m GTRGAMMA -p 123 -f a -# 100 -x 123 -o Daubentonia_madagascariensis_Dependo_95_ -n dependo.26 -s dependo.26-lemuridae.aln.phy
+```
+
+```{r}
+t26<-read.tree("outputs/201/RAxML_bipartitions.dependo.26")
+ggtree(t26)+geom_nodelab()+geom_tiplab() + xlim(0,.5)
+```
+
+Propithecus are sister to each other. Maybe it wouldn't be so bad to root by both Dubentonia, though, it looks like there is some support for it to be with (Eulemur+Prolemur).
+
