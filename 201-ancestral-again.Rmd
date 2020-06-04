@@ -20,6 +20,17 @@ data<-read_tsv("data/epv-side-data.tsv") %>% filter(locus_name !="NK") %>% group
   summarize(Count=n()) %>% arrange(-Count) %>% filter(Count >= 4)
 data
 data %>% arrange(locus_name)
+
+#Returning on 06042020 to create a df that we can attach to trees.
+
+df<-read_tsv("data/epv-side-data.tsv")
+
+#Need something that matches the tip labels. I'll do it in baseR
+df$id<-gsub("-","_",df$id)
+df$id<-paste0(df$id,"_")
+
+#Ok, I prefer dplyr verbs
+df<-df %>% select(-INDEX) %>% mutate(TipLabel=paste0(id,extract_start))
 ```
 
 Obtain alignments.
@@ -65,8 +76,8 @@ grep ROOT RAxML_marginalAncestralStates.dependo.1.ancestral | perl -pe 's/ROOT\s
 What does it look like?
 
 ```{r}
-t1<-read.tree("outputs/201/RAxML_nodeLabelledRootedTree.dependo.1.ancestral")
-ggtree(t1)+geom_nodelab()+geom_tiplab() + xlim(0,20)
+t1<-read.tree("outputs/201/RAxML_bipartitions.dependo.1") 
+ggtree(t1) %<+% df + geom_nodelab() + geom_tiplab(aes(label=TipLabel), align=TRUE) + xlim(0,.4) 
 ```
 
 ### dependo.2
@@ -83,7 +94,7 @@ grep ROOT RAxML_marginalAncestralStates.dependo.2.ancestral | perl -pe 's/ROOT\s
 
 ```{r}
 t2<-read.tree("outputs/201/RAxML_nodeLabelledRootedTree.dependo.2.ancestral")
-ggtree(t2)+geom_nodelab()+geom_tiplab() + xlim(0,12)
+ggtree(t2)%<+% df + geom_nodelab() + geom_tiplab(aes(label=TipLabel), align=TRUE) + xlim(0,12)
 ```
 
 ### dependo.14, 16,17
@@ -109,17 +120,17 @@ grep ROOT RAxML_marginalAncestralStates.dependo.17.ancestral | perl -pe 's/ROOT\
 
 ```{r}
 t14<-read.tree("outputs/201/RAxML_nodeLabelledRootedTree.dependo.14.ancestral")
-ggtree(t14)+geom_nodelab()+geom_tiplab() + xlim(0,6)
+ggtree(t14) %<+% df + geom_nodelab() + geom_tiplab(aes(label=TipLabel), align=TRUE) + xlim(0,6)
 ```
 
 ```{r}
 t16<-read.tree("outputs/201/RAxML_nodeLabelledRootedTree.dependo.16.ancestral")
-ggtree(t16)+geom_nodelab()+geom_tiplab() + xlim(0,6)
+ggtree(t16) %<+% df + geom_nodelab() + geom_tiplab(aes(label=TipLabel), align=TRUE) + xlim(0,6)
 ```
 
 ```{r}
 t17<-read.tree("outputs/201/RAxML_nodeLabelledRootedTree.dependo.17.ancestral")
-ggtree(t17)+geom_nodelab()+geom_tiplab() + xlim(0,6)
+ggtree(t17) %<+% df + geom_nodelab() + geom_tiplab(aes(label=TipLabel), align=TRUE) + xlim(0,6)
 ```
 ### dependo.22
 
@@ -131,9 +142,12 @@ raxmlHPC-PTHREADS-SSE3  -T 3 -m GTRGAMMA -p 123 -f A -t RAxML_bestTree.dependo.2
 grep ROOT RAxML_marginalAncestralStates.dependo.22.ancestral | perl -pe 's/ROOT\s/>dependo.22-laurasiatheria-ancestral\n/' > dependo.22-laurasiatheria-ancestral.fasta
 ```
 
+Not all the tips match perfectly.
 ```{r}
 t22<-read.tree("outputs/201/RAxML_nodeLabelledRootedTree.dependo.22.ancestral")
-ggtree(t22)+geom_nodelab()+geom_tiplab() + xlim(0,30)
+ggtree(t22) +geom_nodelab()+geom_tiplab() + xlim(0,30)
+
+ggtree(t22) %<+% df + geom_nodelab() + geom_tiplab(aes(label=TipLabel), align=TRUE) + xlim(0,34)
 ```
 
 ### dependo.23
@@ -148,7 +162,7 @@ grep ROOT RAxML_marginalAncestralStates.dependo.23.ancestral | perl -pe 's/ROOT\
 
 ```{r}
 t23<-read.tree("outputs/201/RAxML_nodeLabelledRootedTree.dependo.23.ancestral")
-ggtree(t23)+geom_nodelab()+geom_tiplab() + xlim(0,6)
+ggtree(t23) %<+% df + geom_nodelab() + geom_tiplab(aes(label=TipLabel), align=TRUE) + xlim(0,6)
 ```
 
 ### dependo.26
@@ -160,7 +174,7 @@ raxmlHPC-PTHREADS-SSE3 -T 3 -m GTRGAMMA -p 123 -f a -# 100 -x 123 -o Daubentonia
 
 ```{r}
 t26<-read.tree("outputs/201/RAxML_bipartitions.dependo.26")
-ggtree(t26)+geom_nodelab()+geom_tiplab() + xlim(0,.5)
+ggtree(t26) %<+% df + geom_nodelab() + geom_tiplab(aes(label=TipLabel), align=TRUE) + xlim(0,.7)
 ```
 
 Propithecus are sister to each other. Maybe it wouldn't be so bad to root by both Dubentonia, though, it looks like there is some support for it to be with (Eulemur+Prolemur).
@@ -178,7 +192,7 @@ grep ROOT RAxML_marginalAncestralStates.dependo.30.ancestral | perl -pe 's/ROOT\
 
 ```{r}
 t30<-read.tree("outputs/201/RAxML_bipartitions.dependo.30")
-ggtree(t30)+geom_nodelab()+geom_tiplab() + xlim(0,1)
+ggtree(t30) %<+% df + geom_nodelab() + geom_tiplab(aes(label=TipLabel), align=TRUE)+ xlim(0,1)
 ```
 
 ### dependo.33
@@ -194,7 +208,7 @@ grep ROOT RAxML_marginalAncestralStates.dependo.33.ancestral | perl -pe 's/ROOT\
 
 ```{r}
 t33<-read.tree("outputs/201/RAxML_bipartitions.dependo.33")
-ggtree(t33)+geom_nodelab()+geom_tiplab() + xlim(0,0.5)
+ggtree(t33) %<+% df + geom_nodelab() + geom_tiplab(aes(label=TipLabel), align=TRUE) + xlim(0,0.5)
 ```
 
 ### dependo.34
@@ -211,7 +225,7 @@ grep ROOT RAxML_marginalAncestralStates.dependo.34.ancestral | perl -pe 's/ROOT\
 
 ```{r}
 t34<-read.tree("outputs/201/RAxML_bipartitions.dependo.34")
-ggtree(t34)+geom_nodelab()+geom_tiplab() + xlim(0,1)
+ggtree(t34) %<+% df + geom_nodelab() + geom_tiplab(aes(label=TipLabel), align=TRUE) + xlim(0,1.25)
 ```
 
 ### dependo.36
@@ -229,7 +243,7 @@ grep ROOT RAxML_marginalAncestralStates.dependo.36.ancestral | perl -pe 's/ROOT\
 
 ```{r}
 t36<-read.tree("outputs/201/RAxML_bipartitions.dependo.36")
-ggtree(t36)+geom_nodelab()+geom_tiplab() + xlim(0,.5)
+ggtree(t36) %<+% df + geom_nodelab() + geom_tiplab(aes(label=TipLabel), align=TRUE) + xlim(0,.75)
 ```
 
 ### dependo.45
@@ -245,7 +259,7 @@ grep ROOT RAxML_marginalAncestralStates.dependo.45.ancestral | perl -pe 's/ROOT\
 
 ```{r}
 t45<-read.tree("outputs/201/RAxML_bipartitions.dependo.45")
-ggtree(t45)+geom_nodelab()+geom_tiplab() + xlim(0,1)
+ggtree(t45) %<+% df + geom_nodelab() + geom_tiplab(aes(label=TipLabel), align=TRUE) + xlim(0,1.5)
 ```
 
 ## dependo.46
@@ -260,7 +274,7 @@ grep ROOT RAxML_marginalAncestralStates.dependo.46.ancestral | perl -pe 's/ROOT\
 
 ```{r}
 t46<-read.tree("outputs/201/RAxML_bipartitions.dependo.46")
-ggtree(t46)+geom_nodelab()+geom_tiplab() + xlim(0,1)
+ggtree(t46) %<+% df + geom_nodelab() + geom_tiplab(aes(label=TipLabel), align=TRUE) + xlim(0,1)
 ```
 
 ### dependo.50
@@ -277,7 +291,8 @@ grep ROOT RAxML_marginalAncestralStates.dependo.50.ancestral | perl -pe 's/ROOT\
 ```{r}
 
 t50<-read.tree("outputs/201/RAxML_bipartitions.dependo.50")
-ggtree(t50)+geom_nodelab()+geom_tiplab()+xlim(0,.5)
+t50$tip.label<-paste0(t50$tip.label,"_")
+ggtree(t50) %<+% df + geom_nodelab() + geom_tiplab(aes(label=TipLabel), align=TRUE) + xlim(0,.5)
 ```
 
 ### dependo.51
@@ -295,7 +310,7 @@ grep ROOT RAxML_marginalAncestralStates.dependo.51.ancestral | perl -pe 's/ROOT\
 
 ```{r}
 t51<-read.tree("outputs/201//RAxML_bipartitions.dependo.51")
-ggtree(t51)+geom_nodelab()+geom_tiplab()+xlim(0,.15)
+ggtree(t51) %<+% df + geom_nodelab() + geom_tiplab(aes(label=TipLabel), align=TRUE) + xlim(0,.15)
 ```
 
 ### dependo.53
@@ -312,7 +327,9 @@ grep ROOT RAxML_marginalAncestralStates.dependo.53.ancestral | perl -pe 's/ROOT\
 
 ```{r}
 t53<-read.tree("outputs/201/RAxML_bipartitions.dependo.53")
-ggtree(t53)+geom_nodelab()+geom_tiplab()+xlim(0,.5)
+ggtree(t53) %<+% df + geom_nodelab() + geom_tiplab(aes(label=TipLabel), align=TRUE) + xlim(0,.75)
+
+ggsave("outputs/201/RAxML_bipartitions.dependo.53.jpeg")
 ```
 
 ### dependo.54
@@ -323,7 +340,12 @@ raxmlHPC-PTHREADS-SSE3  -T 3 -m GTRGAMMA -p 123 -f A -t RAxML_bestTree.dependo.5
 grep ROOT RAxML_marginalAncestralStates.dependo.54.ancestral | perl -pe 's/ROOT\s/>dependo.54-cavidae-ancestral\n/' > dependo.54-cavidae-ancestral.fasta
 ```
 
+The names in the alignments are really different. I'm not sure what to do about this one.
+
 ```{r}
+
+df %>% filter(locus_name=="dependo.54-cavid") %>% select(id, scaffold, extract_start)
+
 t54<-read.tree("outputs/201/RAxML_bipartitions.dependo.54")
 ggtree(t54)+geom_nodelab()+geom_tiplab()+xlim(0,.5)
 ```
@@ -341,7 +363,7 @@ grep ROOT RAxML_marginalAncestralStates.dependo.65.ancestral | perl -pe 's/ROOT\
 
 ```{r}
 t65<-read.tree("outputs/201/RAxML_bipartitions.dependo.65")
-ggtree(t65)+geom_nodelab()+geom_tiplab()+xlim(0,.5)
+ggtree(t65) %<+% df + geom_nodelab() + geom_tiplab(aes(label=TipLabel), align=TRUE) + xlim(0,.5)
 ```
 
 ### dependo.66
@@ -354,7 +376,8 @@ raxmlHPC-PTHREADS-SSE3  -T 3 -m GTRGAMMA -p 123 -f A -t RAxML_bestTree.dependo.6
 grep ROOT RAxML_marginalAncestralStates.dependo.66.ancestral | perl -pe 's/ROOT\s/>dependo.66-passeriformes-ancestral\n/' > dependo.66-passeriformes-ancestral.fasta
 ```
 
+Like I said earlier, we're misssing one of the passeriforms from the time tree.
 ```{r}
 t66<-read.tree("outputs/201/RAxML_bipartitions.dependo.66")
-ggtree(t66)+geom_nodelab()+geom_tiplab()+xlim(0,.5)
+ggtree(t66) %<+% df + geom_nodelab() + geom_tiplab(aes(label=TipLabel), align=TRUE) + xlim(0,.5)
 ```
