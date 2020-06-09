@@ -119,7 +119,7 @@ tipSpecies<-df3 %>% filter(locus_name %in% tips$locus_name)
 #formatting for carpet plot
 carpet<-annotations %>% mutate(NewX=ifelse(Age==0, max(t$data$x), x)) %>% mutate(NewY=ifelse(Age==0, 0, y))
 carpet<-carpet %>% mutate(isTip = ifelse(Age==0, "Tip", "Node"))
-t + geom_tiplab(size=2) +
+u<-t + geom_tiplab(size=2) +
   xlim(0,400)+
   geom_nodelab(aes(subset=node %in% nodes$node, label=round(Age,2)), hjust=0, size=2)+
   geom_tiplab(aes(subset=label %in% tipSpecies$Delim), size=2, color="red")+
@@ -129,8 +129,80 @@ t + geom_tiplab(size=2) +
   scale_x_continuous(name="Time in Million of Years Ago", breaks=c(12,112,212,312),
                      labels=c(300,200,100,0), limits=c(0,350))
 #max is 312 MYA
-
+u
 ggsave("outputs/101/species-list-min-ages-timetree.pdf", height=20, width=8.5)
+
+```
+## What about some clade labels?
+
+We'll need all the metadata.
+```{r}
+clades<-df %>% select(Delim, Class, Superorder, Order)
+orders <- clades %>% ungroup %>% select(Order) %>% unique() %>% arrange(Order)
+
+Carnivora <- filter(clades, Order == "Carnivora")
+CarnivoraNode <- findMRCA(tree, tips=Carnivora$Delim, type = "node")
+
+Diprotodontia <- filter(clades, Order =="Diprotodontia")
+DiprotodontiaNode <- findMRCA(tree, tips=Diprotodontia$Delim, type = "node")
+
+
+u + geom_cladelabel(CarnivoraNode, "Carnivora", offset=75) +
+    geom_cladelabel(DiprotodontiaNode, "Diprotodontia", offset=75) +
+    xlim(0,450)
+
+```
+
+I think I should write a function.
+
+```{r}
+
+#Order is a character string
+#Clades is a dataframe "clades" in this markdown
+#Tree is our tree, here it is tree
+Clades<-clades
+Tree<-tree
+findMeANode<-function(Taxon) {
+  species <- dplyr::filter(Clades, Order == Taxon)
+  speciesNode <- findMRCA(Tree, tips=species$Delim)
+  return(speciesNode)
+}
+
+ovector<-orders$Order
+findMeANode("Carnivora")
+nodes<-lapply(ovector, findMeANode)
+
+nodes[sapply(nodes, is.null)] <- NA
+
+n<-as_tibble(as.vector(unlist(nodes)))
+
+cladelabels<-bind_cols(orders,n) %>% filter(value != "NA")
+
+```
+
+Looks like I have to incldue th eclade labels one at a time.
+```{r}
+cladelabels<-filter(cladelabels, !(Order %in% c("Unclassified") ))
+                    
+nn<-cladelabels$value
+ll<-cladelabels$Order
+u + 
+    geom_cladelabel(nn[1],ll[1], offset=75) +
+    geom_cladelabel(nn[2],ll[2], offset=75) +
+    geom_cladelabel(nn[3],ll[3], offset=75) +
+    geom_cladelabel(nn[4],ll[4], offset=75) +
+    geom_cladelabel(nn[5],ll[5], offset=75) +
+    geom_cladelabel(nn[6],ll[6], offset=75) +
+    geom_cladelabel(nn[7],ll[7], offset=75) +
+    geom_cladelabel(nn[8],ll[8], offset=75) +
+    geom_cladelabel(nn[9],ll[9], offset=75) +
+    geom_cladelabel(nn[10],ll[10], offset=75) +
+    geom_cladelabel(nn[11],ll[11], offset=75) +
+    geom_cladelabel(nn[12],ll[12], offset=75) +
+    xlim(0,450)
+
+
+ggsave("outputs/101/species-list-min-ages-timetree-clades.pdf", height=20, width=9)
 
 ```
 
