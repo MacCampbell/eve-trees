@@ -193,7 +193,7 @@ u +
     geom_cladelabel(nn[4],ll[4], offset=75) +
     geom_cladelabel(nn[5],ll[5], offset=75) +
     geom_cladelabel(nn[6],ll[6], offset=75) +
-    geom_cladelabel(nn[7],ll[7], offset=75) +
+#    geom_cladelabel(nn[7],ll[7], offset=75) +
     geom_cladelabel(nn[8],ll[8], offset=75) +
     geom_cladelabel(nn[9],ll[9], offset=75) +
     geom_cladelabel(nn[10],ll[10], offset=75) +

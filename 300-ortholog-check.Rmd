@@ -1,0 +1,124 @@
+---
+title: "300-ortholog-check"
+author: "Mac Campbell"
+date: "August 7, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+library(tidyverse)
+library(ggtree)
+```
+
+## Let's see how the ortholog trees look
+
+I'll see about replacing the tip labels so they are short and easy to read.
+```{r}
+t<-read.tree("/Users/mac/github/AAV-GLUE/trees/eve-orthologs/EPV-1-whippomorpha.midpointRooted.tre")
+t$tip.label<-gsub("align.*/","",t$tip.label)
+ggtree(t) +  
+   geom_tiplab(size=3) + xlim(0,sum(t$edge.length))
+
+```
+
+```{r}
+t<-read.tree("/Users/mac/github/AAV-GLUE/trees/eve-orthologs/EPV-2-vespertilionidae.midpointRooted.tre")
+t$tip.label<-gsub("align.*/","",t$tip.label)
+ggtree(t) +  
+   geom_tiplab(size=3) + xlim(0,sum(t$edge.length))
+
+```
+
+```{r}
+t<-read.tree("/Users/mac/github/AAV-GLUE/trees/eve-orthologs/EPV-4-rhinocerotidae.midpointRooted.tre")
+t$tip.label<-gsub("align.*/","",t$tip.label)
+ggtree(t) +  
+   geom_tiplab(size=3) + xlim(0,sum(t$edge.length))
+
+```
+
+
+```{r}
+t<-read.tree("/Users/mac/github/AAV-GLUE/trees/eve-orthologs/EPV-14-cercopithecidae.midpointRooted.tre")
+t$tip.label<-gsub("align.*/","",t$tip.label)
+
+u2<-ggtree(t)
+u2$data<-mutate(u2$data, Supported = ifelse(as.numeric(label) > 95, "YES","NO"))
+u2$data<-mutate(u2$data, Supported90 = ifelse(as.numeric(label) <= 95 & as.numeric(label) >90, "YES","NO"))
+
+
+u2 +  geom_nodepoint(aes(subset = !isTip & Supported =="YES", label=Supported), 
+                  shape=21, fill="black", alpha=1.0, size=2) +
+   geom_nodepoint(aes(subset = !isTip & Supported90 =="YES", label=Supported90), 
+                  shape=21, fill="darkgrey", alpha=1.0, size=2) +
+   geom_tiplab(size=3) + xlim(0,sum(t$edge.length))
+
+```
+
+## Meta
+```{r}
+meta<-read_tsv("~/github/AAV-GLUE/tabular/eve/epv-side-data.tsv") %>% select(-INDEX)
+
+u3<-u2 +  geom_nodepoint(aes(subset = !isTip & Supported =="YES", label=Supported), 
+                  shape=21, fill="black", alpha=1.0, size=2) +
+   geom_nodepoint(aes(subset = !isTip & Supported90 =="YES", label=Supported90), 
+                  shape=21, fill="darkgrey", alpha=1.0, size=2) +
+   geom_tiplab(size=3, align = TRUE) +
+   xlim(0,sum(t$edge.length)) 
+
+u3 %<+% meta +
+  geom_tiplab(aes(label=host_order, color=host_order), align=TRUE,
+              linesize=0, offset=sum(t$edge.length)/3) +
+  geom_tiplab(aes(label=host_family, color=host_family), align=TRUE,
+              linesize=0, offset=sum(t$edge.length)/2)
+
+
+```
+
+## Automating
+I should be able to read in all trees in the `/Users/mac/github/AAV-GLUE/trees/eve-orthologs/` directory and make some silly figures. I'll also color in highly supported nodes.
+
+```{r}
+plotTree<-function(treeFile){
+  t<-read.tree(treeFile)
+  t$tip.label<-gsub("align.*/","",t$tip.label)
+ 
+  u2<-ggtree(t)
+  u2$data<-mutate(u2$data, Supported = ifelse(as.numeric(label) > 95, "YES","NO"))
+  u2$data<-mutate(u2$data, 
+                  Supported90 = ifelse(as.numeric(label) <= 95 & as.numeric(label) >90, "YES","NO"))
+
+u3 <-  u2 +  geom_nodepoint(aes(subset = !isTip & Supported =="YES", label=Supported), 
+                  shape=21, fill="black", alpha=1.0, size=2) +
+   geom_nodepoint(aes(subset = !isTip & Supported90 =="YES", label=Supported90), 
+                  shape=21, fill="darkgrey", alpha=1.0, size=2) +
+   geom_tiplab(size=3) + 
+    xlim(0,sum(t$edge.length)) +
+    geom_treescale() +
+    ggtitle(gsub("/Users/mac/github/AAV-GLUE/trees/eve-orthologs/","",treeFile))
+  
+u3 %<+% meta +
+  geom_tiplab(aes(label=host_order, color=host_order), align=TRUE,
+              linesize=0, linetype=NA, offset=sum(t$edge.length)/3) +
+  geom_tiplab(aes(label=host_family, color=host_family), align=TRUE,
+              linesize=0, linetype=NA, offset=sum(t$edge.length)/2)
+
+ggsave(paste0("outputs/300",gsub("/Users/mac/github/AAV-GLUE/trees/eve-orthologs/","",treeFile),".pdf"))
+}
+filenames <- list.files("/Users/mac/github/AAV-GLUE/trees/eve-orthologs/", 
+                        pattern="*.midpointRooted.tre", full.names=TRUE)
+
+lapply(filenames, plotTree)
+```
+
+Automating worked ok.
+
+##What's funny?
+
+__EPV-16__ The two Canis familiaris EVEs are not placed together, with a very long branch to Dependo 52    
+__EPV-20__ Hyaena, long branch, not placed with other carnivores     
+__EPV-22__ Equus kiang and Equus Zebra are sister on a long branch, forming the midpoint root, and not placed within other Equus spp. There are two EVEs for both of these species. Tapirus indicus is not grouped with other Perissodactyla, that is, I would expect to be the sister to the Rhinocerotidae species in the phylogeny.    
+__EPV-26__ Polyphyly of Daubentonia sequences.    
+
+
