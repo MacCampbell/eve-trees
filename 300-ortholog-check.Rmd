@@ -58,7 +58,8 @@ u2 +  geom_nodepoint(aes(subset = !isTip & Supported =="YES", label=Supported),
 
 ## Meta
 ```{r}
-meta<-read_tsv("~/github/AAV-GLUE/tabular/eve/epv-side-data.tsv") %>% select(-INDEX)
+#meta<-read_tsv("~/github/AAV-GLUE/tabular/eve/epv-side-data.tsv") %>% select(-INDEX)
+meta<-read_tsv("~/github/AAV-GLUE/tabular/eve/epv-dependo-side-data.tsv") %>% select(-INDEX)
 
 u3<-u2 +  geom_nodepoint(aes(subset = !isTip & Supported =="YES", label=Supported), 
                   shape=21, fill="black", alpha=1.0, size=2) +
@@ -109,6 +110,9 @@ ggsave(paste0("outputs/300",gsub("/Users/mac/github/AAV-GLUE/trees/eve-orthologs
 filenames <- list.files("/Users/mac/github/AAV-GLUE/trees/eve-orthologs/", 
                         pattern="*.midpointRooted.tre", full.names=TRUE)
 
+#"/Users/mac/github/AAV-GLUE/trees/eve-orthologs//EPV-22-laurasiatheria.midpointRooted.tre"
+#not working at this time
+filenames<-filenames[filenames!="/Users/mac/github/AAV-GLUE/trees/eve-orthologs//EPV-22-laurasiatheria.midpointRooted.tre"]
 lapply(filenames, plotTree)
 ```
 
@@ -116,9 +120,51 @@ Automating worked ok.
 
 ##What's funny?
 
-__EPV-16__ The two Canis familiaris EVEs are not placed together, with a very long branch to Dependo 52    
-__EPV-20__ Hyaena, long branch, not placed with other carnivores     
-__EPV-22__ Equus kiang and Equus Zebra are sister on a long branch, forming the midpoint root, and not placed within other Equus spp. There are two EVEs for both of these species. Tapirus indicus is not grouped with other Perissodactyla, that is, I would expect to be the sister to the Rhinocerotidae species in the phylogeny.    
-__EPV-26__ Polyphyly of Daubentonia sequences.    
+__EPV-1__ Why are there four Monodon monoceros EVEs? Why ar ethere two Mesoplodon bidens EVEs? Otherwise, the phylogeny seems to track host taxonomy in a really reasonable way.    
+__EPV-2__ Looks great! Nothing to see here.    
+__EPV-3__ Seems fine.    
+__EPV-14__ Seems fine.     
+__EPV-16__ The two Canis familiaris EVEs are not placed together, with a very long branch to Dependo 52. This is worth investigating I think.    
+__EPV-20__ Hyaena, long branch, not placed with other carnivores really, expected to be closely related to cats. In fact there are two clades of carnivora EVEs here, that also have two copies. Investigating the Mink genome indicates that one clade is actually is homologous to the PCDH19-DIAPH2 region on chromosome X in humans. What remains is how to resolve what the hyaena is ...          
+__EPV-22__ Equus kiang and Equus Zebra are sister on a long branch, forming the midpoint root, and not placed within other Equus spp. There are two EVEs for both of these species. Tapirus indicus is not grouped with other Perissodactyla, that is, I would expect to be the sister to the Rhinocerotidae species in the phylogeny.   
+__EPV-23__ Seems fine, nothing to see here.    
+__EPV-26__ Polyphyly of Daubentonia sequences, and both appear early in contigs. Propithecus coquereli duplicates are sister on separate contigs not near the ends.
+__EPV-28__ Maybe Daubentonia_madagascariensis-Dependo-94 and Daubentonia_madagascariensis-Dependo-98 are the same EVE, just separated (?)     
+__EPV-33__ Seems fine.     
+__EPV-35__ Need to look at Megaderma lyra.
+__EPV-46__ Muscardinus EVE's match different kinds of viruses (Avian-adeno-associated-virus-strain-DA-1 Muscardinus_avellanarius-Dependo-224). All other EVEs in this putative locus match Adeno-associated-virus-5 or 2.    
+__EPV-56__ Lots of local dups?
+
+
+### 
+
+/Users/mac/github/AAV-GLUE/trees/eve-root
+aav-root-rep78.eve.export_nucs-MidpointRerooted.tree
+
+We talked a bit about endogenization at different time scales -> into herpes and into humans.
+
+Action points.   
+__1__ Finalise Table of EPV references (same as one in repo, by August 27)
+      __a__ Make a date for a final table.    
+      __b__ Remember, EPV side data has a 'locus numeric id' 
+      Set to 1000 if I don't know which ortholog it      
+      
+__2__ Root tree for dependoparvoviruses + epv references     
+__3__ Big claim - at least 3-4 main dependoparvovirus clades (Diversity section, virus section)   
+        __1__ - reptile + epv    
+        __2__ - avian + mammal + epv    
+        __3__ - herpes-associated     
+        __4__ - mammal     
+        
+__4__ Big Claim - Impact in genome (host section)         
+      __a__ Where in the genome/intergenic-intronic/how old via circos plot?
+
+__5__ A Figure of aligned segments for each locus.
+        ----AAAA----TTTT-----     
+        ----[   ]---[  ]-----     
+        (Rob to send Mac a numeric version)     
+        
+Herpes Virus 6 - where are the insertions in herpes viruses from parvoviruses?
+"eHV.carlito" an endogenized herpesvirus inside a bushbaby that has a parvovirus.
 
 

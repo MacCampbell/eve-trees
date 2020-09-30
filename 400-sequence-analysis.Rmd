@@ -1,0 +1,127 @@
+---
+title: "400-sequence-analysis"
+author: "Mac Campbell"
+date: "September 25, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+```
+
+Packages.    
+```{r}
+library(tidyverse)
+library(ggmsa)
+library(ggtree)
+library(ape)
+library(Biostrings)
+library(msa)
+library(DECIPHER)
+```
+
+## Load and visualize our alignment
+
+```{r}
+file<-file.path("/Users","mac","github","eve-trees","data","aap-alignment-noqs.fasta")
+
+
+ggmsa(file, start = 1, end = 20, color = "Chemistry_AA", seq_name = TRUE)
+
+```
+
+Well, that should work. Now I need to figure a way to figure a consensus sequence and probably order the sequences more sensibly (or are they ordered phylogenetically or something?). I can make a tree to check and see, and also reorder phylogenetically.
+
+
+```{r}
+x <- readAAStringSet(file)
+d <- as.dist(stringDist(x, method = "hamming")/width(x)[1])
+tree <- bionj(d)
+p <- ggtree(tree ) + geom_tiplab() 
+#don't add x limits here cause it screws up everything
+p 
+```
+
+
+
+Ok, now to add alignment to tree. Following https://github.com/YuLab-SMU/ggmsa    
+```{r}
+data = tidy_msa(x, 100, 150)
+
+p + geom_facet(geom = geom_msa, data = data,  panel = 'msa',
+               font = NULL, color = "Chemistry_AA") +
+  xlim_tree(1.5)
+```
+
+Let's see about about increasing facet sizes.
+
+facet_widths doesn't work with example data or with my data. That's annoying.
+```{r}
+
+p2 <-  facet_plot(p + xlim_tree(1.5), panel = 'MSA',
+                  geom = geom_msa, data = data,
+               font = NULL, color = "Chemistry_AA")
+  
+ggtree::facet_widths(p2, c("Tree" = 0.25))
+
+ggsave("outputs/500/aap-tree-with-states.pdf", height=5, width=12)
+
+#hhmmmm....
+align<-ggplot() + geom_msa(data, font=NULL, color="Chemistry_AA")
+align
+
+### https://groups.google.com/g/bioc-ggtree/c/tZ0qkluBeGU
+library(grid)
+library(gtable)
+gt = ggplot_gtable(ggplot_build(p2))
+
+gtable_show_layout(gt) # will show you the layout - very handy function
+gt # see plot layout in table format
+gt$layout$l[grep('panel-2', gt$layout$name)] # you want to find the column specific to panel-2
+
+gt$widths[7] = 5*gt$widths[7] 
+
+
+grid.draw(gt) # plot with grid draw
+
+```
+
+Expanding align.
+
+```{r}
+data = tidy_msa(x)
+
+p2 <-  facet_plot(p + xlim_tree(1.5), panel = 'MSA',
+                  geom = geom_msa, data = data,
+               font = NULL, color = "Chemistry_AA")
+  
+gt = ggplot_gtable(ggplot_build(p2))
+gt$widths[7] = 10*gt$widths[7] 
+
+pdf("outputs/500/aap-tree-with-states-facets.pdf", height=5, width=16)
+grid.draw(gt)
+dev.off()
+
+```
+##Compute consensus
+Consensus function HATES ? characters
+```{r}
+
+con<-ConsensusSequence(x, ignoreNonBases=FALSE, threshold =0.5)
+names(con)<-c("Consensus")
+con
+
+```
+
+```{r}
+y<-c(con,x)
+```
+
+Can use ggmsa directly.
+
+```{r}
+ggmsa(y, color = "Chemistry_AA", seq_name = TRUE, font=NULL)
+
+ggsave("outputs/500/consensus-chem-coded.pdf", height=2, width=24)
+```
+

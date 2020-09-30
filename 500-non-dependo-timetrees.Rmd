@@ -1,0 +1,216 @@
+---
+title: "500-non-dependo-timetrees"
+author: "Mac Campbell"
+date: "September 29, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+```
+
+```{r}
+library(tidyverse)
+library(ggtree)
+library(ggrepel)
+```
+
+##Lets see if we have any convincing loci in the Parvoviridae.
+
+###Amdo
+Amdo_127319_Ellobius   
+Amdo_69149_Ellobius   
+Amdo_3304_Ellobius    
+Amdo_567_Procavia    
+Amdo_565_Orycteropus    
+
+The Ellobius EPV's in part are on the same contig. I think these could be considered the same locus. Probably all independent.
+
+Ellobius not in ENSEMBL.
+
+Let's check out Procavia and Orycteropus....
+
+I don't find evidence that these are two loci, but presumably the two Probothrops are.
+Orycteropus afer
+Procavia capensis
+Ellobius lutescens
+Protobothrops flavoviridis
+Protobothrops mucrosquamatus
+
+```{r}
+data<-read_tsv("outputs/500/meta.tsv")
+data
+```
+
+```{r}
+tree<-read.tree("outputs/500/amdo-taxon-list.nwk")
+t<-ggtree(tree)
+
+#Making tip ages = 0 
+t$data<-t$data %>% mutate(Age=max(x)-x)
+
+t + geom_tiplab(size=2) +
+  geom_treescale()+
+  xlim(0,350)+
+  geom_nodelab(aes(label=round(Age,2)), hjust=0, size=2)
+
+
+```
+Obtain minimum ages
+
+```{r}
+library(phytools)
+#Making "Taxa" for tip labs and calculate number of taxa
+#Exlude unassigned "NK" locus_names
+#filter to tips in tree
+treetips<-t$data %>% filter(isTip==TRUE) %>% select(label)
+
+df<-data %>% filter(locus_name != "NK") %>%
+  mutate(Delim=gsub(" ","_",Species)) %>%
+  filter(Delim %in% treetips$label) %>%
+  group_by(locus_name) %>% mutate(Taxa=paste(Delim, collapse=" "))  %>% mutate(Count=n())
+
+#getting min age of nodes
+df2<-df %>% mutate(node = as.numeric(ifelse(Count > 1, findMRCA(tree, tips=strsplit(Taxa, " ")[[1]]), NA)))
+df3<-left_join(df2, t$data, by="node")
+df3$Age<-replace_na(df3$Age, 0)
+
+
+#Summarize min age of nodes, but including virus_genus
+df3 %>% select(locus_name, Age, virus_genus) %>% unique()
+
+annotations<-df3 %>% select(locus_name, virus_genus, node, Age, x, y) %>% unique()
+```
+
+Annotate Tree
+```{r}
+
+nodes<-filter(annotations, node != "NA")
+tips<-filter(annotations, Age == 0)
+tipSpecies<-df3 %>% filter(locus_name %in% tips$locus_name)
+
+#formatting for carpet plot
+carpet<-annotations %>% mutate(NewX=ifelse(Age==0, max(t$data$x), x)) %>% mutate(NewY=ifelse(Age==0, 0, y))
+carpet<-carpet %>% mutate(isTip = ifelse(Age==0, "Tip", "Node"))
+u<-t + geom_tiplab(size=2) +
+  xlim(0,400)+
+  geom_nodelab(aes(subset=node %in% nodes$node, label=round(Age,2)), hjust=0, size=2)+
+  geom_tiplab(aes(subset=label %in% tipSpecies$Delim), size=2, color="red")+
+  geom_label_repel(data = nodes, aes(x=x, y=y, label=locus_name), size=2, alpha=0.75)+
+  geom_rug(data=filter(carpet, isTip=="Node"), aes(x=NewX, y=NewY), sides="b", position="jitter")  +
+  theme_tree2()+
+  scale_x_continuous(name="Time in Million of Years Ago",
+                     breaks=c(max(t$data$x)-300,max(t$data$x)-200,max(t$data$x)-100,max(t$data$x)),
+                     labels=c(300,200,100,0), limits=c(0,350))
+
+u
+```
+
+## Automate
+
+We should be able to make a function for this... Hmm... Or I can hjust redo it all manually.
+
+```{r}
+#' @param data metadata dataframe with at least the columns Species, virus_genus, locus_name
+#' @param tree path to tree as string e.g. "outputs/500/amdo-taxon-list.nwk"
+#' @param genus to make sure we actually get the right label
+timetree <- function(data, tree, genus) {
+
+#Make the tree  
+  tree<-read.tree(tree)
+  t<-ggtree(tree)
+
+  #Making tip ages = 0 
+  t$data<-t$data %>% mutate(Age=max(x)-x)
+  
+#Making "Taxa" for tip labs and calculate number of taxa
+#Exlude unassigned "NK" locus_names
+#filter to tips in tree
+treetips<-t$data %>% filter(isTip==TRUE) %>% select(label)
+
+df<-data %>% filter(locus_name != "NK") %>%
+  filter(virus_genus==genus) %>%
+  mutate(Delim=gsub(" ","_",Species)) %>%
+  filter(Delim %in% treetips$label) %>%
+  group_by(locus_name) %>% mutate(Taxa=paste(Delim, collapse=" "))  %>% mutate(Count=n())
+
+#getting min age of nodes
+df2<-df %>% mutate(node = as.numeric(ifelse(Count > 1, findMRCA(tree, tips=strsplit(Taxa, " ")[[1]]), NA)))
+df3<-left_join(df2, t$data, by="node")
+df3$Age<-replace_na(df3$Age, 0)
+
+
+#Summarize min age of nodes, but including virus_genus
+df3 %>% select(locus_name, Age, virus_genus) %>% unique()
+
+annotations<-df3 %>% select(locus_name, virus_genus, node, Age, x, y) %>% unique()
+
+#Annotate and make tree
+nodes<-filter(annotations, node != "NA")
+tips<-filter(annotations, Age == 0)
+tipSpecies<-df3 %>% filter(locus_name %in% tips$locus_name)
+
+#formatting for carpet plot
+carpet<-annotations %>% mutate(NewX=ifelse(Age==0, max(t$data$x), x)) %>% mutate(NewY=ifelse(Age==0, 0, y))
+carpet<-carpet %>% mutate(isTip = ifelse(Age==0, "Tip", "Node"))
+u<-t + geom_tiplab(size=4) +
+  xlim(0,400)+
+  geom_nodelab(aes(subset=node %in% nodes$node, label=round(Age,2)), hjust=0, size=3)+
+  geom_tiplab(aes(subset=label %in% tipSpecies$Delim), size=4, color="red")+
+  geom_label_repel(data = nodes, aes(x=x, y=y, label=locus_name), size=3, alpha=0.75)+
+  geom_rug(data=filter(carpet, isTip=="Node"), aes(x=NewX, y=NewY), sides="b", position="jitter")  +
+  theme_tree2()+
+  scale_x_continuous(name="Time in Million of Years Ago",
+                     breaks=c(max(t$data$x)-400,
+                              max(t$data$x)-300,max(t$data$x)-200,max(t$data$x)-100,max(t$data$x)),
+                     labels=c(400,300,200,100,0), limits=c(0,600)) +
+  ggtitle(paste0(genus," Timetree")) +
+  theme(plot.title = element_text(hjust = 0.5))
+return(u)
+}
+```
+
+# Amdoparvovirus
+
+```{r}
+data<-read_tsv("outputs/500/meta.tsv")
+atree<-"outputs/500/amdo-taxon-list.nwk"
+att<-timetree(data, atree, "Amdoparvovirus")
+
+att
+```
+
+# Bocaparvovirus
+Only two exammples, Takifugu rubripes and Pteronotus parnelli, these are 433 mya divergent. Probably different loci...... 13 hits on Tru20 with blastn of 180 bp EPV. Searched with tblastx NC_002077.1 and a representative Bocaparvirus, fTakRub1.2 on 20. I'm somewhat confused about this.
+
+```{r}
+botree<-"outputs/500/boca-taxon-list.nwk"
+bott<-timetree(data, botree, "Bocaparvovirus")
+bott
+```
+
+# Bufavirus
+```{r}
+butree<-"outputs/500/bufa-taxon-list.nwk"
+butt<-timetree(data, butree, "Bufavirus")
+butt
+```
+
+# Chapparvovirus
+```{r}
+cutree<-"outputs/500/chap-taxon-list.nwk"
+cutt<-timetree(data, cutree, "Chapparvovirus")
+cutt
+```
+
+#Erythroparvovirus
+Hyaena?
+
+# Print out
+```{r}
+library(ggpubr)
+ggarrange(att, bott, butt, cutt, ncol=2, nrow=2)
+ggsave("outputs/500/genera-timetree.pdf", width=11, height=11)
+ggsave("outputs/500/genera-timetree.jpg", width=11, height=11)
+
+```
