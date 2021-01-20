@@ -1,0 +1,91 @@
+---
+title: "900-dependo-figure"
+author: "Mac Campbell"
+date: "1/6/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+```
+
+```{r}
+library(tidyverse)
+library(ggtree)
+library(ape)
+library(phytools)
+```
+
+## We probably want a series of figures with crossover and timing.
+
+__1__ Dependo primates+bradypus
+
+Can make a timetree from representative species
+```{r}
+tree<-read.tree("outputs/900/dependo-families.nwk")
+
+tt<-ggtree(tree) 
+
+max<-max(tt$data$x)
+
+tt + 
+  geom_tiplab()+ 
+  theme_tree2() +
+  scale_x_continuous(name="\nTime in Million of Years Ago", breaks=c(max-80,max-60,max-40,max-20,max),
+                     labels=c(80,60,40,20,0), limits=c(0,140)) +
+  theme(axis.title.x = element_text(size=14, face="bold")) +
+  theme(axis.text.x = element_text(size=10, face="bold"))
+```
+```{r}
+details<-read_tsv("outputs/900/dependo-details.tsv")
+
+tt %<+% details +
+  geom_tiplab(aes(label=Taxon), face="bold")+ 
+  theme_tree2() +
+  scale_x_continuous(name="\nTime in Million of Years Ago", breaks=c(max-80,max-60,max-40,max-20,max),
+                     labels=c(80,60,40,20,0), limits=c(0,140)) +
+  theme(axis.title.x = element_text(size=14, face="bold")) +
+  theme(axis.text.x = element_text(size=10, face="bold"))
+```
+
+Let's add some pictures? Nahh...
+
+
+```{r}
+tips<-c("dependo.13-cercopithecidae-con","dependo.14-cercopithecidae-con",
+        "dependo.27-eulemur-con","dependo.7-bradypus")
+tips<-tibble(tips)
+rep<-read.tree("~/github/Parvoviridae-GLUE/trees/genus-level-with-eves/dependo-root-rep78.eve.export_nucs.tre")
+rep<-midpoint.root(rep)
+repmeta<-read_tsv("~/github/Parvoviridae-GLUE/trees/genus-level-with-eves/dependo-root-rep78.eve.figtree-annotations.tsv")
+
+t2<-ggtree(rep) %<+% repmeta
+```
+
+Prune....
+
+```{r}
+df<-t2$data %>% filter(isTip==TRUE) %>% filter(!(sequenceID %in% tips$tips))
+
+t3<-drop.tip(rep, tip=df$label) 
+t3<-root(t3, 
+    outgroup = "alignment/AL_TREE_ROOT_EPV_DEPENDO_Rep/member/fasta-refseqs-dependo-epv-con/dependo.27-eulemur-con")
+
+t4<-ggtree(t3) %<+% repmeta +
+  geom_tiplab(aes(label=sequenceID))
+
+t4
+```
+
+Maybe now we can give it some minimum ages or generate a crossover tree
+
+```{r}
+mins<-read_csv("outputs/102/parvoviridae-min-ages.csv")
+```
+
+Oh, arggh, pruning out things makes this not true.
+
+```{r}
+t2 + geom_tiplab(aes(label=sequenceID), cex=2) + xlim(0,4)
+```
+

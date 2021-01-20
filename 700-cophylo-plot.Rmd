@@ -1,0 +1,71 @@
+---
+title: "700-cophyloplot"
+author: "Mac Campbell"
+date: "12/2/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+```
+
+#Cophyloplot
+We may want to compare the tips of EVE phylogenies versus the host phylogeny to see if we have major differences.
+Example from manual:     
+```{r}
+library(ggtree)
+library(readr)
+library(ape)
+
+#two random trees
+tree1 <- rtree(40)
+tree2 <- rtree(20)
+
+#creation of the association matrix:
+association <- cbind(tree2$tip.label, tree2$tip.label)
+
+cophyloplot(tree1, tree2, assoc = association,
+            length.line = 4, space = 28, gap = 3)
+
+#plot with rotations
+## Not run: 
+#cophyloplot(tree1, tree2, assoc=association, length.line=4, space=28, gap=3, rotate=TRUE)
+
+```
+
+#A real example
+Protoparvovirus?     
+Oh arggh, don't have the right kind of tree, need to look in `trees/genus-level-with-eves`
+```{r}
+rep<-read.tree("~/github/Parvoviridae-GLUE/trees/genus-level-with-eves/dependo-root-rep78.eve.export_nucs.tre")
+repmeta<-read_tsv("~/github/Parvoviridae-GLUE/trees/genus-level-with-eves/dependo-root-rep78.eve.figtree-annotations.tsv")
+  ggtree(rep) %<+% repmeta+geom_tiplab(aes(label=sequenceID))+xlim(0,5)
+
+```
+
+```{r}
+vp<-read.tree("~/github/Parvoviridae-GLUE/trees/genus-level-with-eves/dependo-root-vp1.eve.export_nucs.tre")
+vpmeta<-read_tsv("~/github/Parvoviridae-GLUE/trees/genus-level-with-eves/dependo-root-vp1.eve.figtree-annotations.tsv")
+  ggtree(vp) %<+% vpmeta+geom_tiplab(aes(label=sequenceID))+xlim(0,5)
+
+```
+
+```{r}
+rep$tip.label<-repmeta$sequenceID
+vp$tip.label<-vpmeta$sequenceID
+
+```
+
+```{r}
+association <- cbind(rep$tip.label, vp$tip.label)
+
+pdf("outputs/700/cophylo.pdf", width=22, height=11)
+cophyloplot(rep, vp, assoc = association,
+            length.line = 4, space = 28, gap = 3)
+
+dev.off()
+
+```
+
+
+

@@ -1,0 +1,89 @@
+---
+title: "104-parvo-min-ages"
+author: "Mac Campbell"
+date: "11/25/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+```
+
+```{r}
+library(tidyverse)
+library(mixtools)
+```
+
+## Are our minimum ages meaningful?
+
+```{r}
+data<-read_csv("outputs/102/parvoviridae-min-ages.csv") %>% filter(MinimumAge > 0)
+data
+```
+
+### Histogram
+```{r}
+ggplot(data) + geom_histogram(aes(x=MinimumAge))
+
+```
+
+Fit distributions.     
+__1__ Normal     
+```{r}
+            time = data$MinimumAge
+            mixmdl2 = normalmixEM(time, k=2)
+            mixmdl3 = normalmixEM(time, k=3)
+```
+
+```{r}
+
+ggplot(data, aes(x=MinimumAge)) +
+  geom_histogram(colour="black", aes(y=..density.., fill=..count..)) +
+  stat_function(fun=dnorm, color="red", args=list(mean=mean(data$MinimumAge), 
+                                  sd=sd(data$MinimumAge))) +
+  theme_bw() +
+  theme(panel.grid = element_blank()) +
+  ylab("Density")
+
+```
+
+
+```{r}
+
+ggplot(data, aes(x=MinimumAge)) +
+  geom_histogram(colour="black", aes(y=..density.., fill=..count..)) +
+  stat_function(fun=dnorm, color="red", args=list(mean=mixmdl2$mu[1], 
+                                                 sd=mixmdl2$sigma[1])) +
+  stat_function(fun=dnorm, color="orange", args=list(mean=mixmdl2$mu[2], 
+                                                 sd=mixmdl2$sigma[2])) +
+ 
+  theme_bw() +
+  theme(panel.grid = element_blank()) +
+  ylab("Density")
+
+plot(mixmdl2,which=2)
+lines(density(data$MinimumAge))
+
+```
+
+```{r}
+df<-as_tibble(cbind(mixmdl2$mu, mixmdl2$sigma, mixmdl2$loglik)) %>% rename(Mean=V1, Sigma=V2, LogLik=V3)
+df$Mean
+```
+
+```{r}
+ggplot(data, aes(x=MinimumAge)) + 
+  geom_histogram(colour="black", aes(y=..density..)) +
+  stat_function(fun = dnorm, args=list(mean=df$Mean[1], sd=df$Sigma[1]), aes(fill=df$Mean[1])) +
+  stat_function(fun = dnorm, args=list(mean=df$Mean[2], sd=df$Sigma[2]), aes(fill=df$Mean[2])) +
+  xlim(-1,max(data$MinimumAge)+10) +
+  theme_bw() +
+  theme(panel.grid = element_blank()) +
+  ylab("Density")
+
+```
+
+```{r}
+plot(mixmdl3,which=3)
+lines(density(data$MinimumAge))
+```

@@ -214,3 +214,13 @@ ggsave("outputs/500/genera-timetree.pdf", width=11, height=11)
 ggsave("outputs/500/genera-timetree.jpg", width=11, height=11)
 
 ```
+
+#As facets?
+Seems to me, if I treat each tree as a facet instead, we can have the same x-axis scale.
+
+```{r}
+library(grid)
+
+grid.draw(rbind(ggplotGrob(att), ggplotGrob(bott)))
+```
+

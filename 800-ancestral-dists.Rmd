@@ -1,0 +1,104 @@
+---
+title: "800-ancestral-dists"
+author: "Mac Campbell"
+date: "12/17/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+```
+
+```{r}
+library(tidyverse)
+library(ggtree)
+library(ape)
+library(paleotree)
+library(phytools)
+```
+
+## Ancestral ranges for taxa
+Springer et al. (2011) - https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3138613/      
+Laurasiatheria - Eurasia     
+Boreoeutheria - Eurasia   
+Euarchontoglires - Eurasia   
+Africa - Afrotheria
+Xenartha -  South America
+
+## Let's take a look at the tree:
+```{r}
+rep<-read.tree("~/github/Parvoviridae-GLUE/trees/genus-level-with-eves/dependo-root-rep78.eve.export_nucs.tre")
+repmeta<-read_tsv("~/github/Parvoviridae-GLUE/trees/genus-level-with-eves/dependo-root-rep78.eve.figtree-annotations.tsv")
+t <-  ggtree(rep) %<+% repmeta+geom_tiplab(aes(label=sequenceID)) + 
+    xlim(0,5)
+
+t
+```
+
+## Make a time-scaled tree with paleotree
+Setting all tip dates to 0 for non-eves, can left_join on ages from elsewhere.
+```{r}
+ages<-repmeta %>% select(taxon, sequenceID, name) %>% mutate(locus_name=sequenceID)
+ages$locus_name<-gsub("-con","",ages$locus_name)
+mins<-read_csv("outputs/102/parvoviridae-min-ages.csv")
+
+ages2<-ages %>% left_join(mins)
+```
+
+Not complete agreement between *.tsv used to generate min ages and this tree.
+
+```{r}
+ages3 <- ages2 %>% mutate(MinimumAge = ifelse(startsWith(sequenceID,"dependo")=="FALSE", 0, MinimumAge))
+#remove those with no info
+ages4<-ages3[is.na(ages3$MinimumAge)=="FALSE",]
+drops<-ages3[is.na(ages3$MinimumAge)=="FALSE",]
+
+tree2<-keep.tip(rep, tip=ages4$taxon)
+```
+
+#### What's our tree look like?
+```{r}
+t2<- ggtree(midpoint.root(tree2)) %<+% ages4 + geom_tiplab(aes(label=sequenceID)) + 
+    xlim(0,5)
+
+t2
+```
+
+Now we should be able to make it time calibrated....         
+tree<-unscaled cladogram       
+timeData<-two-column matrix of first and last occurrences in absolute continuous time.     
+```{r}
+#reorder data to rename tips
+order<-as_tibble(tree2$tip.label) %>% left_join(ages4, by=c("value"="taxon")) %>% mutate(Age2=MinimumAge)
+tree3<-midpoint.root(tree2)
+tree3$tip.label<-order$sequenceID
+
+matrix<-order %>% select(MinimumAge, Age2) %>% as.matrix()
+row.names(matrix)<-tree3$tip.label
+## Root by oldest clade
+ggtree(tree3) + geom_tiplab()+geom_nodelab(aes(label=node))
+tree4<-root(tree3, node = 65)
+ggtree(tree4) + geom_tiplab()+geom_nodelab(aes(label=node))
+```
+
+```{r}
+pdf("outputs/800/paleo-tree.pdf", height=14, width=8)
+tt<-timePaleoPhy(tree4,matrix, ntrees = 1, plot = TRUE)
+dev.off()
+```
+
+ggtree versions
+
+```{r}
+max<-tt$root.time
+
+ggtree(tt) + 
+  geom_tiplab() + 
+  theme_tree2() +
+  scale_x_continuous(name="\nTime in Million of Years Ago", breaks=c(max-80,max-60,max-40,max-20,max),
+                     labels=c(80,60,40,20,0), limits=c(0,120)) +
+  theme(axis.title.x = element_text(size=14, face="bold")) +
+  theme(axis.text.x = element_text(size=10, face="bold"))
+ggsave("outputs/800/paleo-tree-ggtree.pdf", height=7, width=8)
+```
+

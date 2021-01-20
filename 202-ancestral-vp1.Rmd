@@ -1,0 +1,28 @@
+---
+title: "202-ancestral-vp1"
+author: "Mac Campbell"
+date: "October 19, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+```
+
+```{r}
+library(tidyverse)
+library(ggtree)
+```
+## Ancestral states
+```{r}
+tree<-read.tree(file="~/Dropbox/digs/ancestral-states/RAxML_bestTree.rerooted.tre")
+
+t<-ggtree(tree, alpha=0.75)
+
+t + geom_nodelab(aes(label=node), fontface="bold") + geom_tiplab(align=TRUE, size=2) + 
+  xlim(0,6)
+
+ggsave("outputs/202/aav-root-vp1.eve.aln.tree.pdf")
+```
+
+We want nodes 44:

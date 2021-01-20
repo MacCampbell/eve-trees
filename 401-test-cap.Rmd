@@ -1,0 +1,81 @@
+---
+title: "401-test-cap"
+author: "Mac Campbell"
+date: "October 12, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+```
+
+## Expanding cap to about 100 genbank seqs
+Packages.    
+```{r}
+library(tidyverse)
+library(ggmsa)
+library(ggtree)
+library(ape)
+library(Biostrings)
+library(msa)
+library(DECIPHER)
+library(phytools)
+```
+
+## Load and visualize our alignment
+
+```{r}
+file<-file.path("/Users","mac","github","eve-syn","outputs","1100","aa.afas")
+
+
+ggmsa(file, start = 1, end = 20, color = "Chemistry_AA", seq_name = TRUE)
+
+```
+
+```{r}
+x <- readAAStringSet(file)
+tree<-read.tree("~/github/eve-syn/outputs/1100/RAxML_bestTree.nucleotides")
+tree<-midpoint.root(tree)
+p <- ggtree(tree ) + geom_tiplab(size=2, align = TRUE) 
+#don't add x limits here cause it screws up everything
+p 
+```
+
+## Including the alignment
+
+```{r}
+data = tidy_msa(x)
+
+#facet_widths(p2, c(1,4)) # continues not to work
+
+#dropping out the invariant sites
+data2<- data %>% group_by(position) %>% mutate(Count=n_distinct(character)) %>% filter(Count > 4) %>% select(-Count) %>% 
+  mutate(NewPosition=position) %>% ungroup %>% group_by(NewPosition) %>% mutate(position=group_indices())
+
+#Which sites are so variable?
+unique(data2$NewPosition)
+
+p2 <-  facet_plot(p + xlim_tree(1), panel = 'MSA',
+                  geom = geom_msa, data = data2,
+               font = NULL, color = "Chemistry_AA")
+p2
+
+ggsave("outputs/400/test-data-most-variable.pdf", height=11, width=8)
+```
+
+
+```{r}
+library(grid)
+library(gtable)
+gt = ggplot_gtable(ggplot_build(p2))
+
+gtable_show_layout(gt) # will show you the layout - very handy function
+gt # see plot layout in table format
+gt$layout$l[grep('panel-2', gt$layout$name)] # you want to find the column specific to panel-2
+
+gt$widths[7] = 5*gt$widths[7] 
+
+
+grid.draw(gt) # plot with grid draw
+
+```

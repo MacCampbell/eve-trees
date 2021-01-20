@@ -1,0 +1,207 @@
+---
+title: "601-dependoparvovirus"
+author: "Mac Campbell"
+date: "11/10/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+```
+
+```{r}
+library(plyr)
+library(tidyverse)
+library(ggtree)
+library(cowplot)
+```
+
+#Get hosts
+```{r}
+dependo<-read_tsv("~/github/Parvoviridae-GLUE/tabular/eve/epv-dependo-side-data.tsv") %>%
+    select(organism, sequenceID, locus_name,host_class) %>% mutate(virus_genus="Dependoparvovirus") %>%
+  mutate(Class=host_class) %>% select(-host_class)
+
+data<-dependo
+data$Species<-gsub("_"," ",data$organism)
+data<-data %>% select(Species, organism, locus_name, virus_genus, sequenceID, Class)
+species<-data %>% select(Species) %>% unique()
+write_tsv(species, "outputs/601/dependo-species-list.tsv", col_names = FALSE)
+
+```
+
+Send to timetree.....
+17 naming issues
+Equus caballus fjord
+Equus caballus icelandic
+Panthera tigris altaica (replaced with Panthera tigris)
+Canis familiaris (replaced with Canis lupus)
+Canis lupus dingo (replaced with Canis lupus)
+Equus asinus somalicus (replaced with Equus asinus)
+Equus africanus asinus (replaced with Equus asinus)
+Equus burchellii boehmi (replaced with Equus burchellii)
+Equus zebra hartmannae (replaced with Equus zebra)
+Ceratotherium simum cottoni (replaced with Ceratotherium simum)
+Dicerorhinus sumatrensis sumatrensis (replaced with Dicerorhinus sumatrensis)
+Cervus elaphus hippelaphus (replaced with Cervus elaphus)
+Murina aurata feae (replaced with Murina aurata)
+Mus castaneus (replaced with Mus musculus)
+Peromyscus maniculatus bairdii (replaced with Peromyscus maniculatus)
+Colobus angolensis palliatus (replaced with Colobus angolensis)
+Neophocaena asiaeorientalis (no substitute found)
+
+```{r}
+tree<-read.tree("outputs/601/dependo-species-list.nwk")
+t<-ggtree(tree)
+
+#Making tip ages = 0 
+t$data<-t$data %>% mutate(Age=max(x)-x)
+
+t + geom_tiplab(size=2) +
+  geom_treescale()+
+  xlim(0,200)+
+  geom_nodelab(aes(label=round(Age,2)), hjust=0, size=2)
+
+
+ggsave("outputs/601/dependoparvovirus-timetree.pdf", height=20, width=8.5)
+```
+
+##Host ranges
+
+```{r}
+library(rgbif)
+library(countrycode)
+sppToContinents <- function(sp) {
+  out<-occ_search(scientificName=sp, limit=50)
+  countries<-out$data$country
+  if (length(countries[!is.na(countries)]) > 1) {
+  continents<-unique(countrycode(sourcevar = countries, origin="country.name",destination="continent"))
+  continents<-continents[!is.na(continents)]
+  return(cbind(sp, continents)) }
+}
+```
+
+
+```{r, eval=FALSE}
+species<-read_tsv("outputs/601/dependo-species-list.tsv", col_names=c("Species"))
+spp<-species$Species
+clist<-lapply(spp, sppToContinents)
+
+```
+
+```{r, eval=FALSE}
+df<-as_tibble( ldply(clist, data.frame))
+save(df,file="outputs/601/df.rda")
+
+df
+write_csv(df, "outputs/601/species-ranges.csv")
+```
+
+Needs a bit of help.
+```{r}
+rev<-read_csv("outputs/601/species-ranges-curated.csv")
+rev
+```
+
+#Now to set up DEC
+
+datafile looks like:   
+NumTips NumStates     
+SpeciesName 010010    
+
+etc. Ten States:
+North America1
+South America2
+Caribbean3
+Europe4
+North Africa5
+Sub-Saharan Africa6    
+Asia7     
+Australia8     
+Madagascar9
+Antartica10
+"dependoData.txt"      
+
+dependoConfigure.txt         
+need a file like:      
+
+treefile = prunedTree.tre     
+datafile = abudefduf.data     
+areanames = WPac CPac EPac WAtl EAtl WInd EInd     
+ancstate = _all_   
+states     
+
+```{sh, eval=FALSE}
+
+~/lagrange/lagrange_cpp_0.1BETA2_for_MAC10.6/lagrange_cpp dependoConfigure.txt > output
+
+```
+     
+## Plot
+```{r}
+
+tree<-read.tree(file="outputs/601/tree.nwk.bgstates.tre")
+nodeLabels<-tree$node.label
+
+##Modified by Mac for making labels
+##' add node label layer
+##'
+##'
+##' @title geom_nodelab
+##' @param mapping aes mapping
+##' @param nudge_x horizontal adjustment to nudge label
+##' @param nudge_y vertical adjustment to nudge label
+##' @param geom one of 'text', 'label', 'image' and 'phylopic'
+##' @param hjust horizontal alignment, one of 0, 0.5 or 1
+##' @param ... additional parameters
+##' @return geom layer
+##' @export
+##' @author guangchuang yu
+geom_nodelab <- function(mapping = NULL, nudge_x = 0, nudge_y = 0, geom = "label", hjust = 0.5, ...) {
+  self_mapping <- aes_(subset = ~!isTip)
+  if (is.null(mapping)) {
+    mapping <- self_mapping
+  } else {
+    mapping <- modifyList(self_mapping, mapping)
+  }
+  
+  geom_tiplab(mapping, offset = nudge_x, nudge_y = nudge_y, geom = geom, hjust = hjust, ...)
+}
+
+#geom_nodelab()
+p<-ggtree(tree, right=TRUE)+geom_nodelab(fill="grey50", color="white", size=2.5)+
+  geom_tiplab(size=3)+
+  theme_tree2()+
+  ggplot2::xlim(-200, 50)
+
+
+p$data$x <- p$data$x - max(p$data$x)
+
+p
+
+ggsave("outputs/601/dependoparvovirus-DEC-tree.pdf")
+```
+
+Might be nice to have node ages as a plot.
+
+```{r}
+q<-ggtree(tree, right=TRUE)
+
+q$data$x <- q$data$x - max(q$data$x)
+q$data<-q$data %>% mutate(label=ifelse(isTip=="TRUE",label,round(x,2)))
+ 
+q2<-q + geom_nodelab(aes(label=label), color="black", size=2.5)+
+  geom_tiplab(size=3)+
+  theme_tree2()+
+  ggplot2::xlim(-200, 50)
+
+q2
+
+```
+
+
+All together now!    
+```{r}
+plot_grid(p, q2, ncol=2)
+ggsave("outputs/601/dependoparvovirus-timetree-with-ancdists.pdf", width = 11, height=8.5)
+```

@@ -1,0 +1,147 @@
+---
+title: "102-parvoviridae"
+author: "Mac Campbell"
+date: "October 27, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+```
+
+```{r}
+library(tidyverse)
+library(ggtree)
+library(phytools)
+library(ggrepel)
+```
+
+## Mega time tree
+We have several viral genera now.    
+
+```{r}
+amdo<-read_tsv("~/github/Parvoviridae-GLUE/tabular/eve/epv-amdo-side-data.tsv") %>% 
+  select(organism, virus_genus, sequenceID,Class) %>% mutate(locus_name=paste0("amdo-",sequenceID))
+dependo<-read_tsv("~/github/Parvoviridae-GLUE/tabular/eve/epv-dependo-side-data.tsv") %>%
+    select(organism, sequenceID, locus_name,host_class) %>% mutate(virus_genus="Dependoparvovirus") %>%
+  mutate(Class=host_class) %>% select(-host_class)
+erythro<-read_tsv("~/github/Parvoviridae-GLUE/tabular/eve/epv-erythyro-side-data.tsv") %>% 
+  select(organism, virus_genus, sequenceID,Class) %>% mutate(locus_name=paste0("amdo-",sequenceID))
+proto<-read_tsv("~/github/Parvoviridae-GLUE/tabular/eve/epv-proto-side-data.tsv")  %>%
+    select(organism, virus_genus, sequenceID, locus_name, Class) 
+
+data<-rbind(amdo,dependo,erythro,proto)
+data$Species<-gsub("_"," ",data$organism)
+data<-data %>% select(Species, organism, locus_name, virus_genus, sequenceID, Class)
+species<-data %>% select(Species) %>% unique()
+write_tsv(species, "data/species-list-102.tsv", col_names = FALSE)
+
+```
+
+Adding on writing species names to file:
+```{r}
+list<-split(data, f=data$locus_name)
+```
+
+```{r}
+writeList<-function(table) {
+  species<-as_tibble(unique(table$Species))
+  if(length(species$value) > 1) {
+  write_tsv(species, col_names = FALSE, paste0("outputs/102/lists/",unique(table$locus_name),".tsv"))
+  }
+}
+```
+
+```{r}
+lapply(list, writeList)
+```
+
+
+18 unresolved names: 
+Equus caballus icelandic
+Equus caballus fjord
+Panthera tigris altaica (replaced with Panthera tigris)
+Canis familiaris (replaced with Canis lupus)
+Canis lupus dingo (replaced with Canis lupus)
+Equus asinus somalicus (replaced with Equus asinus)
+Equus africanus asinus (replaced with Equus asinus)
+Equus burchellii boehmi (replaced with Equus burchellii)
+Equus zebra hartmannae (replaced with Equus zebra)
+Ceratotherium simum cottoni (replaced with Ceratotherium simum)
+Dicerorhinus sumatrensis sumatrensis (replaced with Dicerorhinus sumatrensis)
+Giraffa camelopardalis tippelskirchi (replaced with Giraffa camelopardalis)
+Cervus elaphus hippelaphus (replaced with Cervus elaphus)
+Murina aurata feae (replaced with Murina aurata)
+Mus castaneus (replaced with Mus musculus)
+Peromyscus maniculatus bairdii (replaced with Peromyscus maniculatus)
+Colobus angolensis palliatus (replaced with Colobus angolensis)
+Neophocaena asiaeorientalis (no substitute found)
+
+```{r}
+tree<-read.tree("data/species-list-102.nwk")
+t<-ggtree(tree)
+
+#Making tip ages = 0 
+t$data<-t$data %>% mutate(Age=max(x)-x)
+
+t + geom_tiplab(size=2) +
+  geom_treescale()+
+  xlim(0,500)+
+  geom_nodelab(aes(label=round(Age,2)), hjust=0, size=2)
+
+
+ggsave("outputs/101/species-list-102-timetree.pdf", height=20, width=8.5)
+
+```
+
+
+```{r, warning=FALSE, message=FALSE}
+#Making "Taxa" for tip labs and calculate number of taxa
+#Exlude unassigned "NK" locus_names
+#filter to tips in tree
+treetips<-t$data %>% filter(isTip==TRUE) %>% select(label)
+
+df<-data %>% filter(locus_name != "NK") %>% unique() %>%
+  mutate(Delim=gsub(" ","_",Species)) %>%
+  filter(Delim %in% treetips$label) %>%
+  group_by(locus_name) %>% mutate(Taxa=paste(Delim, collapse=" "))  %>% mutate(Count=n())
+
+#getting min age of nodes
+df2<-df %>% mutate(node = as.numeric(ifelse(Count > 1, findMRCA(tree, tips=strsplit(Taxa, " ")[[1]]), NA)))
+df3<-left_join(df2, t$data, by="node")
+df3$Age<-replace_na(df3$Age, 0)
+
+
+#Summarize min age of nodes
+df3 %>% select(locus_name, Age) %>% unique()
+
+annotations<-df3 %>% select(locus_name, node, Age, x, y, Class, virus_genus) %>% unique()
+
+minAges<-annotations %>% rename(MinimumAge=Age) %>% select(virus_genus, locus_name, MinimumAge, Class)
+
+write_csv(minAges, "outputs/102/parvoviridae-min-ages.csv")
+```
+
+##Annotating tree
+```{r}
+
+nodes<-filter(annotations, node != "NA")
+tips<-filter(annotations, Age == 0)
+tipSpecies<-df3 %>% filter(locus_name %in% tips$locus_name)
+
+#formatting for carpet plot
+carpet<-annotations %>% mutate(NewX=ifelse(Age==0, max(t$data$x), x)) %>% mutate(NewY=ifelse(Age==0, 0, y))
+carpet<-carpet %>% mutate(isTip = ifelse(Age==0, "Tip", "Node"))
+u<-t + geom_tiplab(size=2) +
+  xlim(0,435)+
+  geom_nodelab(aes(subset=node %in% nodes$node, label=round(Age,2)), hjust=0, size=2)+
+  geom_tiplab(aes(subset=label %in% tipSpecies$Delim), size=2, color="grey")+
+  geom_label_repel(data = nodes, aes(x=x, y=y, label=locus_name), size=2, alpha=0.75)+
+  geom_rug(data=filter(carpet, isTip=="Node"), aes(x=NewX, y=NewY, color=virus_genus), sides="b", position="jitter")  +
+  theme_tree2()+
+  scale_x_continuous(name="Time in Million of Years Ago", breaks=c(35,135,235,335,435),
+                     labels=c(400,300,200,100,0), limits=c(0,550))
+u
+ggsave("outputs/102/parvoviridae-min-ages-timetree.pdf", height=20, width=8.5)
+
+```

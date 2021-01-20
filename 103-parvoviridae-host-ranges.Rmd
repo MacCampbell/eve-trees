@@ -1,0 +1,87 @@
+---
+title: "103-host-ranges"
+author: "Mac Campbell"
+date: "November 4, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+```
+
+```{r}
+library(tidyverse)
+library(data.table)
+
+```
+## Host ranges.
+
+I have a s .tsv of species.
+
+```{r}
+species<-read_tsv("data/species-list-102.tsv", col_names = "Species")
+
+species
+```
+
+I want to query all of those species ranges and annotate a tree with them.
+```{r}
+library(rgbif)
+library(countrycode)
+```
+
+```{r, eval=FALSE}
+temp<-name_lookup("Procavia capensis", rank="species", limit = 20)
+out<-occ_search(scientificName = "Procavia capensis", limit = 20)
+unique(countrycode(sourcevar = out$data$country, origin="country.name",destination="continent"))
+```
+
+Hmm.... I'll need to write something smart.
+
+```{r, eval=FALSE}
+spp<-species[1:5,]$Species
+```
+
+
+Function:
+```{r}
+sppToContinents <- function(sp) {
+  out<-occ_search(scientificName=sp, limit=20)
+  countries<-out$data$country
+  if (length(countries[!is.na(countries)]) > 1) {
+  continents<-unique(countrycode(sourcevar = countries, origin="country.name",destination="continent"))
+  continents<-continents[!is.na(continents)]
+  return(cbind(sp, continents)) }
+}
+```
+
+```{r, eval=FALSE}
+clist<-lapply(spp, sppToContinents)
+```
+
+```{r, eval=FALSE}
+library(plyr)
+df<-as_tibble( ldply(clist, data.frame))
+save(df,file="outputs/103/df.rda")
+```
+
+Now a RScript
+`Macs-MBP-2:eve-trees mac$ ./103.1-host-ranges.R `     
+
+Load data.     
+```{r}
+load("outputs/103/df.rda")
+
+df 
+write_csv(df, "outputs/103/species-distributions.csv")
+```
+
+
+```{r}
+
+proto<-read_tsv("~/github/Parvoviridae-GLUE/tabular/eve/epv-proto-side-data.tsv") %>%
+  filter(virus_genus=="Protoparvovirus")
+
+critters<-proto %>% select(organism) %>% unique()
+
+```
