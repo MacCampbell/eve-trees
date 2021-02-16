@@ -1,0 +1,164 @@
+---
+title: "901-dependo-tree-with-sizes"
+author: "Mac Campbell"
+date: "February 5, 2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+```
+
+## Dependo Tree with Clade Sizes
+
+```{r}
+library(tidyverse)
+library(ggtree)
+library(ape)
+library(phytools)
+```
+
+```{r}
+cap<-read.tree("~/github/Parvoviridae-GLUE/trees/genus-level-with-eves/dependo-root-vp1.eve.export_nucs.tre")
+cap<-midpoint.root(cap)
+capmeta<-read_tsv("~/github/Parvoviridae-GLUE/trees/genus-level-with-eves/dependo-root-vp1.eve.figtree-annotations.tsv")
+t2<-ggtree(cap) %<+% capmeta
+```
+
+```{r}
+t2 + geom_tiplab(aes(label=sequenceID), cex=2) + xlim(0,4) 
+```
+
+
+Now to figure out the size of each locus.
+
+```{r}
+dependo<-read_tsv("~/github/Parvoviridae-GLUE/tabular/eve/epv-dependo-side-data.tsv") %>%
+    select(organism, sequenceID, locus_name,host_class,host_superorder) %>% mutate(virus_genus="Dependoparvovirus") %>%
+  mutate(Class=host_class,`Host Superorder`=host_superorder) %>% select(-host_class,-host_superorder)
+```
+
+```{r}
+counts<-dependo %>% group_by(Class, `Host Superorder`,locus_name) %>% summarize(Count=n()) %>% rename(sequenceID=locus_name)
+```
+
+Some of the meta ends with con...
+
+```{r}
+t3<-t2
+t3$data$sequenceID<-gsub("-con","",t3$data$sequenceID)
+t3$data<-left_join(t3$data, counts)
+```
+
+```{r}
+t3 + geom_tiplab(aes(label=sequenceID), cex=2, align = TRUE) + xlim(0,4) +
+  geom_tippoint(aes(size=Count, fill=`Host Superorder`), x=2.75, pch=21, alpha=0.75)
+ggsave("outputs/901/dependo-tree-with-counts.pdf")
+```
+
+##Example from phyltools
+Need something like this:    
+trans<-data.frame(tip.label,clade.label,N,depth)       
+  tip.label clade.label  N     depth    
+1        t3           A 11 0.5209987    
+2        t7           B  3 0.4694350    
+3        t2           C 17 0.5515002   
+
+
+```{r}
+
+tips<-filter(t3$data, isTip==TRUE) %>% select(label, sequenceID, Count)
+tips$Count<-replace_na(tips$Count, 1)
+tips<-tips %>% rename(tip.label=label, clade.label=sequenceID, N=Count)
+
+tree<-cap
+tip.label<-tree$tip.label
+
+depth<-sapply(tip.label,function(x,y) 
+	0.5*y$edge.length[which(tree$edge[,2]==
+	which(y$tip.label==x))],y=tree)
+
+depth<-as.data.frame(depth)
+
+tips$depth<-depth$depth
+obj<-phylo.toBackbone(tree,tips)
+plot(obj)
+
+pdf("outputs/901/dependo-backbone-phylo.pdf", width=8, height=11)
+plot(obj, cex=.8)
+dev.off()
+```
+
+##What about for the other gene?
+
+```{r}
+cap<-read.tree("~/github/Parvoviridae-GLUE/trees/genus-level-with-eves/dependo-root-rep78.eve.export_nucs.tre")
+cap<-midpoint.root(cap)
+capmeta<-read_tsv("~/github/Parvoviridae-GLUE/trees/genus-level-with-eves/dependo-root-rep78.eve.figtree-annotations.tsv")
+t2<-ggtree(cap) %<+% capmeta
+```
+
+
+```{r}
+t2 + geom_tiplab(aes(label=sequenceID), cex=2) + xlim(0,4) 
+```
+
+
+Now to figure out the size of each locus.
+
+```{r}
+dependo<-read_tsv("~/github/Parvoviridae-GLUE/tabular/eve/epv-dependo-side-data.tsv") %>%
+    select(organism, sequenceID, locus_name,host_class,host_superorder) %>% mutate(virus_genus="Dependoparvovirus") %>%
+  mutate(Class=host_class,`Host Superorder`=host_superorder) %>% select(-host_class,-host_superorder)
+```
+
+```{r}
+counts<-dependo %>% group_by(Class, `Host Superorder`,locus_name) %>% summarize(Count=n()) %>% rename(sequenceID=locus_name)
+```
+
+Some of the meta ends with con...
+
+```{r}
+t3<-t2
+t3$data$sequenceID<-gsub("-con","",t3$data$sequenceID)
+t3$data<-left_join(t3$data, counts)
+```
+
+```{r}
+t3 + geom_tiplab(aes(label=sequenceID), cex=2, align = TRUE) + xlim(0,4) +
+  geom_tippoint(aes(size=Count, fill=`Host Superorder`), x=2.75, pch=21, alpha=0.75)
+ggsave("outputs/901/dependo-tree-rep78-with-counts.pdf")
+```
+
+##Example from phyltools
+Need something like this:    
+trans<-data.frame(tip.label,clade.label,N,depth)       
+  tip.label clade.label  N     depth    
+1        t3           A 11 0.5209987    
+2        t7           B  3 0.4694350    
+3        t2           C 17 0.5515002   
+
+
+```{r}
+
+tips<-filter(t3$data, isTip==TRUE) %>% select(label, sequenceID, Count)
+tips$Count<-replace_na(tips$Count, 1)
+tips<-tips %>% rename(tip.label=label, clade.label=sequenceID, N=Count)
+
+tree<-cap
+tip.label<-tree$tip.label
+
+depth<-sapply(tip.label,function(x,y) 
+	0.5*y$edge.length[which(tree$edge[,2]==
+	which(y$tip.label==x))],y=tree)
+
+depth<-as.data.frame(depth)
+
+tips$depth<-depth$depth
+obj<-phylo.toBackbone(tree,tips)
+plot(obj)
+
+pdf("outputs/901/dependo-backbone-phylo-rep78.pdf", width=8, height=15)
+plot(obj, cex=.8)
+dev.off()
+```

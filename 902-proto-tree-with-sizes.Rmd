@@ -1,0 +1,21 @@
+---
+title: "902-proto-tree-with-sizes.Rmd"
+author: "Mac Campbell"
+date: "February 15, 2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+```
+
+```{r}
+library(tidyverse)
+library(ggtree)
+library(ape)
+library(phytools)
+```
+
+##Protos!!!
+
+Copying ideas from 901.
