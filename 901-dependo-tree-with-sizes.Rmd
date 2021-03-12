@@ -67,9 +67,9 @@ trans<-data.frame(tip.label,clade.label,N,depth)
 
 ```{r}
 
-tips<-filter(t3$data, isTip==TRUE) %>% select(label, sequenceID, Count)
+tips<-filter(t3$data, isTip==TRUE) %>% select(label, name, Count)
 tips$Count<-replace_na(tips$Count, 1)
-tips<-tips %>% rename(tip.label=label, clade.label=sequenceID, N=Count)
+tips<-tips %>% rename(tip.label=label, clade.label=name, N=Count)
 
 tree<-cap
 tip.label<-tree$tip.label
@@ -85,7 +85,7 @@ obj<-phylo.toBackbone(tree,tips)
 plot(obj)
 
 pdf("outputs/901/dependo-backbone-phylo.pdf", width=8, height=11)
-plot(obj, cex=.8)
+plot(obj, cex=.6)
 dev.off()
 ```
 
@@ -141,9 +141,9 @@ trans<-data.frame(tip.label,clade.label,N,depth)
 
 ```{r}
 
-tips<-filter(t3$data, isTip==TRUE) %>% select(label, sequenceID, Count)
+tips<-filter(t3$data, isTip==TRUE) %>% select(label, name, Count)
 tips$Count<-replace_na(tips$Count, 1)
-tips<-tips %>% rename(tip.label=label, clade.label=sequenceID, N=Count)
+tips<-tips %>% rename(tip.label=label, clade.label=name, N=Count)
 
 tree<-cap
 tip.label<-tree$tip.label
@@ -159,6 +159,6 @@ obj<-phylo.toBackbone(tree,tips)
 plot(obj)
 
 pdf("outputs/901/dependo-backbone-phylo-rep78.pdf", width=8, height=15)
-plot(obj, cex=.8)
+plot(obj, cex=.6)
 dev.off()
 ```

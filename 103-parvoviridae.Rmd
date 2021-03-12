@@ -1,7 +1,7 @@
 ---
-title: "102-parvoviridae"
+title: "103-parvoviridae"
 author: "Mac Campbell"
-date: "October 27, 2020"
+date: "March 12, 2021"
 output: html_document
 ---
 
@@ -21,20 +21,34 @@ We have several viral genera now.
 
 ```{r}
 amdo<-read_tsv("~/github/Parvoviridae-GLUE/tabular/eve/epv-amdo-side-data.tsv") %>% 
-  select(organism, virus_genus, sequenceID,Class) %>% mutate(locus_name=paste0("amdo-",sequenceID))
-dependo<-read_tsv("~/github/Parvoviridae-GLUE/tabular/eve/epv-dependo-side-data.tsv") %>%
-    select(organism, sequenceID, locus_name,host_class) %>% mutate(virus_genus="Dependoparvovirus") %>%
-  mutate(Class=host_class) %>% select(-host_class)
-erythro<-read_tsv("~/github/Parvoviridae-GLUE/tabular/eve/epv-erythyro-side-data.tsv") %>% 
-  select(organism, virus_genus, sequenceID,Class) %>% mutate(locus_name=paste0("amdo-",sequenceID))
-proto<-read_tsv("~/github/Parvoviridae-GLUE/tabular/eve/epv-proto-side-data.tsv")  %>%
-    select(organism, virus_genus, sequenceID, locus_name, Class) 
+  select(organism, sequenceID, locus_name, host_class) %>%
+  mutate(virus_genus = "Amdoparvovirus") %>% rename(Class=host_class)
 
-data<-rbind(amdo,dependo,erythro,proto)
+dependo<-read_tsv("~/github/Parvoviridae-GLUE/tabular/eve/epv-dependo-side-data.tsv") %>%
+    select(organism, sequenceID, locus_name, host_class) %>% mutate(virus_genus="Dependoparvovirus") %>%
+  rename(Class=host_class) 
+
+erythro<-read_tsv("~/github/Parvoviridae-GLUE/tabular/eve/epv-erythyro-side-data.tsv") %>% 
+  select(organism, sequenceID, locus_name, host_class) %>% 
+  mutate(virus_genus = "Erythroparvovirus") %>% rename(Class=host_class)
+
+ichthama<-read_tsv("~/github/Parvoviridae-GLUE/tabular/eve/epv-ichthama-side-data.tsv") %>%
+  select(organism, sequenceID, locus_name, host_class) %>%
+  mutate(virus_genus = "Ichthamaparvovirus")
+
+proto<-read_tsv("~/github/Parvoviridae-GLUE/tabular/eve/epv-proto-side-data.tsv")  %>%
+  select(host_species, sequenceID, locus_name, host_class) %>%
+  rename(organism=host_species) %>% 
+  mutate(vrius_genus="Protoparvovirus")
+
+```
+
+```{r}
+data<-bind_rows(amdo,dependo,erythro,ichthama, proto)
 data$Species<-gsub("_"," ",data$organism)
 data<-data %>% select(Species, organism, locus_name, virus_genus, sequenceID, Class)
 species<-data %>% select(Species) %>% unique()
-write_tsv(species, "data/species-list-102.tsv", col_names = FALSE)
+write_tsv(species, "data/species-list-103.tsv", col_names = FALSE)
 
 ```
 
@@ -47,7 +61,7 @@ list<-split(data, f=data$locus_name)
 writeList<-function(table) {
   species<-as_tibble(unique(table$Species))
   if(length(species$value) > 1) {
-  write_tsv(species, col_names = FALSE, paste0("outputs/102/lists/",unique(table$locus_name),".tsv"))
+  write_tsv(species, col_names = FALSE, paste0("outputs/103/lists/",unique(table$locus_name),".tsv"))
   }
 }
 ```

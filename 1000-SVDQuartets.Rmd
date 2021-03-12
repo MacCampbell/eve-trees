@@ -1,0 +1,21 @@
+---
+title: "1000-SVDQuartets"
+author: "Mac Campbell"
+date: "2/25/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+```
+
+```{r}
+library(tidyverse)
+library(ggtree)
+```
+
+## SVDQuartets
+
+```{r}
+tree<-read.tree("outputs/1000/svdq-test.asc.tre")
+```
